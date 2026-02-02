@@ -1,0 +1,72 @@
+{
+  "generate": {
+    "seed": 42
+  },
+  "simulate": {
+    "ticks": 24,
+    "seed": 42,
+    "start_time": null,
+    "engine": {
+      "demand_probability_base": 0.05,
+      "demand_probability_business_hours": 0.12,
+      "business_hours_start": 8,
+      "business_hours_end": 18,
+      "bulk_order_probability": 0.08,
+      "bulk_order_qty_min": 10,
+      "bulk_order_qty_max": 20,
+      "normal_order_qty_min": 1,
+      "normal_order_qty_max": 5,
+      "production_duration_hours_min": 8,
+      "production_duration_hours_max": 24,
+      "base_lead_time_hours_min": 24,
+      "base_lead_time_hours_max": 168,
+      "partial_shipment_probability": 0.15,
+      "partial_shipment_min_pct": 0.80,
+      "partial_shipment_max_pct": 0.95,
+      "quality_reject_rate_min": 0.01,
+      "quality_reject_rate_max": 0.05,
+      "data_corruption_enabled": true,
+      "data_corruption_probability": 0.01,
+      "cost_drift_enabled": true,
+      "cost_drift_daily_pct": 0.005,
+      "cost_drift_max_pct": 0.20,
+      "seasonality_enabled": true,
+      "demand_seasonality_strength": 1.0,
+      "supplier_seasonality_strength": 1.0
+    }
+  },
+  "all": {
+    "ticks": 24,
+    "seed": 42,
+    "start_time": null,
+    "engine": {
+      "demand_probability_base": 0.05,
+      "demand_probability_business_hours": 0.12,
+      "business_hours_start": 8,
+      "business_hours_end": 18,
+      "bulk_order_probability": 0.08,
+      "bulk_order_qty_min": 10,
+      "bulk_order_qty_max": 20,
+      "normal_order_qty_min": 1,
+      "normal_order_qty_max": 5,
+      "production_duration_hours_min": 8,
+      "production_duration_hours_max": 24,
+      "base_lead_time_hours_min": 24,
+      "base_lead_time_hours_max": 168,
+      "partial_shipment_probability": 0.15,
+      "partial_shipment_min_pct": 0.80,
+      "partial_shipment_max_pct": 0.95,
+      "quality_reject_rate_min": 0.01,
+      "quality_reject_rate_max": 0.05,
+      "data_corruption_enabled": true,
+      "data_corruption_probability": 0.01,
+      "cost_drift_enabled": true,
+      "cost_drift_daily_pct": 0.005,
+      "cost_drift_max_pct": 0.20,
+      "seasonality_enabled": true,
+      "demand_seasonality_strength": 1.0,
+      "supplier_seasonality_strength": 1.0
+    }
+  }
+}
+

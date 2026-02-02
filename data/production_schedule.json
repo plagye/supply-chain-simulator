@@ -1,0 +1,193 @@
+{
+  "active_jobs": [
+    {
+      "job_id": "548351cb-0cd4-418b-b642-3a3166524061",
+      "product_id": "DRONE-X1",
+      "status": "WIP",
+      "start_date": "2026-02-02T10:21:47Z",
+      "due_date": "2026-02-08T23:22:47Z",
+      "assigned_worker_id": "WORKER-001"
+    },
+    {
+      "job_id": "f1ad39f8-b60b-40f7-a51b-67467e896caa",
+      "product_id": "DRONE-X1",
+      "status": "WIP",
+      "start_date": "2026-02-02T02:08:47Z",
+      "due_date": "2026-02-05T06:22:47Z",
+      "assigned_worker_id": "WORKER-002"
+    },
+    {
+      "job_id": "9bf7ea58-2ced-4808-81f5-2ed0e64eff9b",
+      "product_id": "DRONE-X1",
+      "status": "WIP",
+      "start_date": "2026-02-02T10:39:47Z",
+      "due_date": "2026-02-09T03:22:47Z",
+      "assigned_worker_id": "WORKER-003"
+    },
+    {
+      "job_id": "cc5836f2-c35e-439b-8fe0-9359f68fb579",
+      "product_id": "DRONE-X1",
+      "status": "Planned",
+      "created_at": "2026-02-25T08:22:47Z",
+      "start_date": null,
+      "due_date": "2026-02-28T08:22:47Z",
+      "expected_completion": null,
+      "production_duration_hours": 20,
+      "assigned_worker_id": "WORKER-017"
+    },
+    {
+      "job_id": "521fd98c-3f73-4e39-a3f3-7d256ff20a5f",
+      "product_id": "DRONE-X1",
+      "status": "Planned",
+      "created_at": "2026-02-25T23:22:47Z",
+      "start_date": null,
+      "due_date": "2026-02-28T23:22:47Z",
+      "expected_completion": null,
+      "production_duration_hours": 9,
+      "assigned_worker_id": "WORKER-015"
+    },
+    {
+      "job_id": "2959f796-33f0-4b47-94af-87e6bf1b458e",
+      "product_id": "DRONE-X1",
+      "status": "Planned",
+      "created_at": "2026-02-26T17:22:47Z",
+      "start_date": null,
+      "due_date": "2026-03-01T17:22:47Z",
+      "expected_completion": null,
+      "production_duration_hours": 14,
+      "assigned_worker_id": "WORKER-013"
+    },
+    {
+      "job_id": "1a7f597c-5377-4e60-b436-5306b4f20255",
+      "product_id": "DRONE-X1",
+      "status": "Planned",
+      "created_at": "2026-02-27T01:22:47Z",
+      "start_date": null,
+      "due_date": "2026-03-02T01:22:47Z",
+      "expected_completion": null,
+      "production_duration_hours": 21,
+      "assigned_worker_id": "WORKER-006"
+    },
+    {
+      "job_id": "902849d3-c5a3-452d-9539-161522ded207",
+      "product_id": "DRONE-X1",
+      "status": "Planned",
+      "created_at": "2026-02-27T08:22:47Z",
+      "start_date": null,
+      "due_date": "2026-03-02T08:22:47Z",
+      "expected_completion": null,
+      "production_duration_hours": 21,
+      "assigned_worker_id": "WORKER-021"
+    },
+    {
+      "job_id": "eced2f92-4f21-45d8-9741-86e597a9d712",
+      "product_id": "DRONE-X1",
+      "status": "Planned",
+      "created_at": "2026-02-27T11:22:47Z",
+      "start_date": null,
+      "due_date": "2026-03-02T11:22:47Z",
+      "expected_completion": null,
+      "production_duration_hours": 10,
+      "assigned_worker_id": "WORKER-022"
+    },
+    {
+      "job_id": "4c49481d-6024-4182-a0ef-19b07828f93e",
+      "product_id": "DRONE-X1",
+      "status": "Planned",
+      "created_at": "2026-02-27T14:22:47Z",
+      "start_date": null,
+      "due_date": "2026-03-02T14:22:47Z",
+      "expected_completion": null,
+      "production_duration_hours": 20,
+      "assigned_worker_id": "WORKER-003"
+    },
+    {
+      "job_id": "101321d0-16b9-4460-8549-9370fcb132b8",
+      "product_id": "DRONE-X1",
+      "status": "Planned",
+      "created_at": "2026-02-28T12:22:47Z",
+      "start_date": null,
+      "due_date": "2026-03-03T12:22:47Z",
+      "expected_completion": null,
+      "production_duration_hours": 12,
+      "assigned_worker_id": "WORKER-010"
+    },
+    {
+      "job_id": "29209db6-b59c-4234-97f3-29b4d5cc214a",
+      "product_id": "DRONE-X1",
+      "status": "Planned",
+      "created_at": "2026-03-01T10:22:47Z",
+      "start_date": null,
+      "due_date": "2026-03-04T10:22:47Z",
+      "expected_completion": null,
+      "production_duration_hours": 12,
+      "assigned_worker_id": "WORKER-012"
+    },
+    {
+      "job_id": "0e0bed55-a531-41d7-9470-557c5564da08",
+      "product_id": "DRONE-X1",
+      "status": "Planned",
+      "created_at": "2026-03-01T16:22:47Z",
+      "start_date": null,
+      "due_date": "2026-03-04T16:22:47Z",
+      "expected_completion": null,
+      "production_duration_hours": 24,
+      "assigned_worker_id": "WORKER-006"
+    },
+    {
+      "job_id": "0b782aaa-512b-4d62-bd9f-2326715890b2",
+      "product_id": "DRONE-X1",
+      "status": "Planned",
+      "created_at": "2026-03-02T15:22:47Z",
+      "start_date": null,
+      "due_date": "2026-03-05T15:22:47Z",
+      "expected_completion": null,
+      "production_duration_hours": 23,
+      "assigned_worker_id": "WORKER-018"
+    },
+    {
+      "job_id": "dc8b1933-b6a0-4428-a4fb-e39422694dda",
+      "product_id": "DRONE-X1",
+      "status": "Planned",
+      "created_at": "2026-03-03T19:22:47Z",
+      "start_date": null,
+      "due_date": "2026-03-06T19:22:47Z",
+      "expected_completion": null,
+      "production_duration_hours": 14,
+      "assigned_worker_id": "WORKER-023"
+    },
+    {
+      "job_id": "f330c658-629f-48b2-99c1-22425d6236af",
+      "product_id": "DRONE-X1",
+      "status": "Planned",
+      "created_at": "2026-03-04T07:22:47Z",
+      "start_date": null,
+      "due_date": "2026-03-07T07:22:47Z",
+      "expected_completion": null,
+      "production_duration_hours": 17,
+      "assigned_worker_id": "WORKER-021"
+    },
+    {
+      "job_id": "717b5331-ce25-498e-97cb-847574b90ed9",
+      "product_id": "DRONE-X1",
+      "status": "Planned",
+      "created_at": "2026-03-04T11:22:47Z",
+      "start_date": null,
+      "due_date": "2026-03-07T11:22:47Z",
+      "expected_completion": null,
+      "production_duration_hours": 12,
+      "assigned_worker_id": "WORKER-013"
+    },
+    {
+      "job_id": "475702ff-7932-4a77-9a5e-d51145cbb22d",
+      "product_id": "DRONE-X1",
+      "status": "Planned",
+      "created_at": "2026-03-04T18:22:47Z",
+      "start_date": null,
+      "due_date": "2026-03-07T18:22:47Z",
+      "expected_completion": null,
+      "production_duration_hours": 17,
+      "assigned_worker_id": "WORKER-021"
+    }
+  ]
+}
