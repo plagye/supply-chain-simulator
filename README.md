@@ -2,6 +2,55 @@
 
 A realistic supply chain simulation for practicing data engineering skills (SQL, Pandas, Excel, PowerBI).
 
+## The Business Scenario
+
+You're the data engineer at **SkyForge Dynamics**, a mid-sized manufacturer of industrial drones. The company produces the **DRONE-X1**, a commercial-grade quadcopter used for surveying, inspection, and delivery applications.
+
+### The Product: DRONE-X1
+
+The DRONE-X1 is assembled from ~50 different components organized into 7 sub-assemblies:
+
+| Sub-Assembly | Key Components |
+|--------------|----------------|
+| **Airframe & Structure** | Carbon fiber sheets, aluminum extrusions, landing gear, vibration dampeners |
+| **Propulsion System** | Brushless motors (4x), ESCs, propellers (4x) |
+| **Power System** | Li-Ion battery cells, battery management ICs, power distribution board |
+| **Flight Controller** | 32-bit microcontroller, IMU sensor, barometer, GPS module |
+| **Communication** | Radio transceiver, antenna, telemetry module |
+| **Payload Bay** | Camera gimbal, mounting brackets, payload connectors |
+| **Wiring & Connectors** | Wire harnesses, XT60 connectors, signal cables |
+
+### The Supply Chain
+
+**Suppliers (30 total)** are distributed globally:
+- **China (40%)** - Electronics, motors, batteries. *Watch out for Chinese New Year disruptions (Jan-Feb)!*
+- **Taiwan (20%)** - Semiconductors, ICs. *Also affected by CNY.*
+- **Germany (20%)** - Precision components, sensors. *Slower in August (vacation) and December (holidays).*
+- **USA (20%)** - Specialized electronics, GPS modules. *Thanksgiving and Christmas slowdowns.*
+
+Suppliers vary in reliability (70-100%) and pricing. Reliable suppliers charge premium prices but deliver on time. Cheaper suppliers may have longer lead times, partial shipments, or quality issues.
+
+### The Customers
+
+**15 B2B customers** across three regions:
+- **North America (40%)** - Primarily commercial/industrial
+- **EMEA (35%)** - Mix of commercial and government
+- **APAC (25%)** - Growing market
+
+Customers are split into two tiers:
+- **Tier 1** - Government/defense contracts with strict SLAs and penalty clauses
+- **Tier 2** - Commercial customers with standard terms
+
+### The Challenges You'll Analyze
+
+- **Demand seasonality**: Q4 surge, summer lull, end-of-quarter rushes
+- **Supplier disruptions**: CNY shuts down Asian suppliers for weeks
+- **Cost volatility**: Raw material prices drift ±20% over time
+- **Quality issues**: 1-5% of incoming parts fail inspection
+- **Backorders**: When demand exceeds supply, orders split across multiple shipments
+
+---
+
 ## Overview
 
 This simulator generates realistic supply chain events including:
