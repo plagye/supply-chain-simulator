@@ -1,3 +1,45 @@
+"""World Engine - Core simulation engine for supply chain events.
+
+This module implements the main simulation logic for the supply chain simulator.
+It handles demand generation, inventory management, production scheduling,
+procurement, and supplier interactions.
+
+Key Classes:
+    WorldEngine: Main simulation engine that orchestrates all events
+    BlackSwanEvent: Represents major supply chain disruptions
+    SalesOrder, PendingPurchaseOrder, PendingBackorder: Data classes for tracking orders
+
+Key Features:
+    - Hourly tick-based simulation
+    - Configurable seasonality (monthly, day-of-week, period-end)
+    - Supplier reliability and lead time modeling
+    - Production job management with BOM consumption
+    - Automatic reorder point triggers
+    - Black swan event support for historical data generation
+    - Dual output mode: JSON files or PostgreSQL database
+
+Usage:
+    from scripts.world_engine import WorldEngine
+    
+    # Basic usage
+    engine = WorldEngine(seed=42)
+    for _ in range(24):  # Simulate 1 day
+        engine.tick()
+    engine.save_state()
+    
+    # 24/7 service mode
+    engine = WorldEngine(output_mode="database")
+    while engine.running:
+        engine.tick()
+        time.sleep(5)
+
+Configuration:
+    See DEFAULT_CONFIG dict for all configurable parameters.
+    Override via the config parameter in __init__.
+
+Author: SkyForge Dynamics Data Engineering Team
+"""
+
 from __future__ import annotations
 
 import atexit
@@ -64,6 +106,17 @@ DEMAND_SEASONALITY = {
     10: 1.2,   # October - Q4 ramp
     11: 1.4,   # November - peak season
     12: 1.3,   # December - holiday orders
+}
+
+# Day-of-week demand multipliers (0=Monday, 6=Sunday)
+DAY_OF_WEEK_DEMAND = {
+    0: 0.85,   # Monday - slow start to the week
+    1: 0.95,   # Tuesday - ramping up
+    2: 1.0,    # Wednesday - mid-week baseline
+    3: 1.05,   # Thursday - building momentum
+    4: 1.25,   # Friday - end-of-week rush, orders before weekend
+    5: 0.6,    # Saturday - reduced business activity
+    6: 0.4,    # Sunday - minimal activity
 }
 
 # Supplier seasonality by country and date range
@@ -166,6 +219,70 @@ class PendingBackorder:
     created_at: datetime
 
 
+@dataclass
+class BlackSwanEvent:
+    """Represents a major supply chain disruption event.
+    
+    Black swan events cause significant but temporary disruptions to
+    demand and/or supplier lead times for affected regions.
+    """
+    name: str
+    start_date: datetime
+    duration_days: int
+    demand_multiplier: float       # e.g., 0.7 for 30% demand drop
+    lead_time_multiplier: float    # e.g., 2.5 for 2.5x longer lead times
+    affected_countries: list[str]  # e.g., ["China", "Taiwan"]
+    
+    @property
+    def end_date(self) -> datetime:
+        """Calculate the end date of the event."""
+        return self.start_date + timedelta(days=self.duration_days)
+    
+    def is_active(self, current_time: datetime) -> bool:
+        """Check if the event is currently active."""
+        return self.start_date <= current_time < self.end_date
+
+
+# Templates for black swan events (used when generating 5-year history)
+BLACK_SWAN_TEMPLATES = [
+    {
+        "name": "Supply Chain Crisis",
+        "duration_days": 21,
+        "demand_multiplier": 0.7,
+        "lead_time_multiplier": 2.5,
+        "affected_countries": ["China", "Taiwan"],
+    },
+    {
+        "name": "Port Congestion Event",
+        "duration_days": 30,
+        "demand_multiplier": 0.9,
+        "lead_time_multiplier": 2.0,
+        "affected_countries": ["China", "USA"],
+    },
+    {
+        "name": "Regional Natural Disaster",
+        "duration_days": 14,
+        "demand_multiplier": 0.5,
+        "lead_time_multiplier": 3.0,
+        "affected_countries": ["Taiwan"],
+    },
+    {
+        "name": "Global Logistics Disruption",
+        "duration_days": 28,
+        "demand_multiplier": 0.8,
+        "lead_time_multiplier": 2.2,
+        "affected_countries": ["China", "Germany", "USA"],
+    },
+    {
+        "name": "Semiconductor Shortage",
+        "duration_days": 25,
+        "demand_multiplier": 1.1,  # Demand actually increases (panic buying)
+        "lead_time_multiplier": 3.5,
+        "affected_countries": ["Taiwan", "China"],
+    },
+]
+
+
 class WorldEngine:
     """
     Core simulation engine for supply chain events.
@@ -182,11 +299,17 @@ class WorldEngine:
         start_time: datetime | None = None,
         log_path: Path | None = None,
         config: dict[str, Any] | None = None,
+        output_mode: str = "json",
+        include_black_swan: bool = False,
+        simulation_years: int = 1,
     ) -> None:
         self.data_dir = data_dir or DATA_DIR
         self.rng = random.Random(seed)
         self.current_time = start_time or datetime.now(timezone.utc)
         self.log_path = log_path or (self.data_dir / "daily_events_log.jsonl")
+        self.output_mode = output_mode  # "json" or "database"
+        self.tick_count = 0
+        self.running = True  # For service mode graceful shutdown
         
         # Merge provided config with defaults
         self.config = {**DEFAULT_CONFIG, **(config or {})}
@@ -221,6 +344,14 @@ class WorldEngine:
         
         # Corruption tracking (for meta-log)
         self._corruption_log_path = self.data_dir / "corruption_meta_log.jsonl"
+        
+        # Black swan event (only for 5-year historical generation)
+        self._black_swan_event: BlackSwanEvent | None = None
+        if include_black_swan and simulation_years >= 5:
+            self._black_swan_event = self._generate_black_swan_event(simulation_years)
+            if self._black_swan_event:
+                # Log the black swan event at startup
+                self._log_black_swan_start()
 
         self._ensure_schedule_shape()
         self._ensure_inventory_shape()
@@ -262,22 +393,50 @@ class WorldEngine:
             self.inventory = {}
 
     def _log_event(self, event_type: str, payload: dict[str, Any]) -> None:
-        """Append an event to the JSONL log file."""
+        """Log an event to JSON file or database based on output_mode."""
         event = {
             "timestamp": iso_utc(self.current_time),
             "event_type": event_type,
             "payload": payload,
         }
         
+        if self.output_mode == "database":
+            self._log_event_to_database(event)
+        else:
+            self._log_event_to_json(event)
+
+    def _log_event_to_database(self, event: dict[str, Any]) -> None:
+        """Insert an event into the PostgreSQL database."""
+        try:
+            from scripts.db_manager import insert_event
+            result = insert_event(event)
+            if result is None:
+                # Fallback to JSON on database failure
+                import sys
+                print(f"Warning: Failed to insert event to database, falling back to JSON", 
+                      file=sys.stderr)
+                self._log_event_to_json(event)
+        except ImportError:
+            # db_manager not available, fall back to JSON
+            import sys
+            print("Warning: Database module not available, falling back to JSON", 
+                  file=sys.stderr)
+            self._log_event_to_json(event)
+        except Exception as e:
+            import sys
+            print(f"Warning: Database error: {e}, falling back to JSON", file=sys.stderr)
+            self._log_event_to_json(event)
+
+    def _log_event_to_json(self, event: dict[str, Any]) -> None:
+        """Append an event to the JSONL log file."""
         # Convert to JSON string
         json_line = json.dumps(event, ensure_ascii=False)
         
         # Maybe corrupt the data (for error handling practice)
-        corruption_type = None
         if (self.config.get("data_corruption_enabled", False) and 
             self.rng.random() < self.config.get("data_corruption_probability", 0.01)):
-            json_line, corruption_type = self._corrupt_json_line(json_line, event_type)
-            self._log_corruption_meta(event_type, corruption_type)
+            json_line, corruption_type = self._corrupt_json_line(json_line, event["event_type"])
+            self._log_corruption_meta(event["event_type"], corruption_type)
         
         try:
             self.log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -379,14 +538,17 @@ class WorldEngine:
         
         Each tick:
         1. Advance time
-        2. Apply daily cost drift (once per day)
-        3. Process incoming purchase orders (receive parts)
-        4. Try to fulfill pending backorders
-        5. Check reorder points and trigger automatic POs
-        6. Generate customer demand
-        7. Run production (start jobs, complete jobs)
+        2. Check for black swan event transitions
+        3. Apply daily cost drift (once per day)
+        4. Process incoming purchase orders (receive parts)
+        5. Try to fulfill pending backorders
+        6. Check reorder points and trigger automatic POs
+        7. Generate customer demand
+        8. Run production (start jobs, complete jobs)
         """
         self.current_time += timedelta(hours=1)
+        self.tick_count += 1
+        self._check_black_swan_events()
         self._apply_daily_cost_drift()
         self._process_pending_purchase_orders()
         self._process_pending_backorders()
@@ -407,8 +569,51 @@ class WorldEngine:
         day = self.current_time.day
         return month in [3, 6, 9, 12] and day >= 20
 
+    def _get_day_of_week_factor(self) -> float:
+        """Get demand multiplier based on day of week (Friday rush, weekend lull)."""
+        if not self.config.get("seasonality_enabled", True):
+            return 1.0
+        
+        day_of_week = self.current_time.weekday()  # 0=Monday, 6=Sunday
+        base_factor = DAY_OF_WEEK_DEMAND.get(day_of_week, 1.0)
+        
+        # Apply strength modifier
+        strength = self.config.get("demand_seasonality_strength", 1.0)
+        return 1.0 + (base_factor - 1.0) * strength
+
+    def _get_period_end_factor(self) -> float:
+        """Get demand multiplier for month-end and quarter-end spikes.
+        
+        Month-end (last 3 days): 20% boost - financial closing pressure
+        Quarter-end (Mar, Jun, Sep, Dec, last 5 days): additional 15% boost
+        """
+        if not self.config.get("seasonality_enabled", True):
+            return 1.0
+        
+        day = self.current_time.day
+        month = self.current_time.month
+        factor = 1.0
+        
+        # Last 3 days of month: 20% boost (financial month-end pressure)
+        # Using day >= 28 as approximation for "last 3 days"
+        if day >= 28:
+            factor = 1.2
+        
+        # Quarter-end months (Mar, Jun, Sep, Dec) get extra 15% in last 5 days
+        if month in (3, 6, 9, 12) and day >= 26:
+            factor *= 1.15
+        
+        return factor
+
     def _get_demand_seasonality_factor(self) -> float:
-        """Get demand multiplier based on month and end-of-quarter."""
+        """Get combined demand multiplier from all seasonality factors.
+        
+        Combines:
+        - Monthly seasonality (e.g., November peak, January slump)
+        - Day-of-week effects (Friday rush, weekend lull)
+        - Period-end spikes (month-end, quarter-end)
+        - Black swan events (major disruptions)
+        """
         if not self.config.get("seasonality_enabled", True):
             return 1.0
         
@@ -417,17 +622,27 @@ class WorldEngine:
         base_factor = DEMAND_SEASONALITY.get(month, 1.0)
         
         # Apply strength (1.0 = full effect, 0.5 = half effect, 0 = no effect)
-        factor = 1.0 + (base_factor - 1.0) * strength
+        monthly_factor = 1.0 + (base_factor - 1.0) * strength
         
-        # End of quarter rush adds 50% more demand
-        if self._is_end_of_quarter():
-            factor *= 1.5
+        # Get day-of-week factor
+        dow_factor = self._get_day_of_week_factor()
         
-        return factor
+        # Get period-end factor (month-end / quarter-end)
+        period_factor = self._get_period_end_factor()
+        
+        # Get black swan factor (if active)
+        black_swan_factor = self._get_black_swan_demand_factor()
+        
+        # Combine all factors multiplicatively
+        return monthly_factor * dow_factor * period_factor * black_swan_factor
 
     def _get_supplier_seasonality_factor(self, supplier_id: str | None) -> dict[str, float]:
         """
         Get lead time and reliability multipliers for a supplier based on seasonality.
+        
+        Includes:
+        - Regular seasonality (holidays, vacation periods)
+        - Black swan events (major disruptions)
         
         Returns dict with 'lead_time_mult' and 'reliability_mult'.
         """
@@ -441,23 +656,135 @@ class WorldEngine:
         
         supplier = self.suppliers_by_id.get(supplier_id, {})
         country = supplier.get("country")
-        if not country or country not in SUPPLIER_SEASONALITY:
-            return default
         
-        strength = self.config.get("supplier_seasonality_strength", 1.0)
-        current_month = self.current_time.month
-        current_day = self.current_time.day
+        result = {"lead_time_mult": 1.0, "reliability_mult": 1.0}
         
-        for (start_month, start_day), (end_month, end_day), factors in SUPPLIER_SEASONALITY[country]:
-            # Check if current date is within the period
-            if self._date_in_period(current_month, current_day, 
-                                    start_month, start_day, end_month, end_day):
-                # Apply strength modifier
-                lead_mult = 1.0 + (factors["lead_time_mult"] - 1.0) * strength
-                rel_mult = 1.0 + (factors["reliability_mult"] - 1.0) * strength
-                return {"lead_time_mult": lead_mult, "reliability_mult": rel_mult}
+        # Check regular seasonality
+        if country and country in SUPPLIER_SEASONALITY:
+            strength = self.config.get("supplier_seasonality_strength", 1.0)
+            current_month = self.current_time.month
+            current_day = self.current_time.day
+            
+            for (start_month, start_day), (end_month, end_day), factors in SUPPLIER_SEASONALITY[country]:
+                if self._date_in_period(current_month, current_day, 
+                                        start_month, start_day, end_month, end_day):
+                    result["lead_time_mult"] = 1.0 + (factors["lead_time_mult"] - 1.0) * strength
+                    result["reliability_mult"] = 1.0 + (factors["reliability_mult"] - 1.0) * strength
+                    break
         
-        return default
+        # Apply black swan effects (multiplicative on top of regular seasonality)
+        black_swan_mult = self._get_black_swan_supplier_factor(supplier_id)
+        result["lead_time_mult"] *= black_swan_mult
+        
+        return result
+
+    def _generate_black_swan_event(self, simulation_years: int) -> BlackSwanEvent | None:
+        """Generate a random black swan event for historical simulation.
+        
+        Places the event randomly in years 2-4 of a 5-year simulation,
+        avoiding the first year (to establish baseline) and last year
+        (to show recovery).
+        """
+        if simulation_years < 5:
+            return None
+        
+        # Pick a random template
+        template = self.rng.choice(BLACK_SWAN_TEMPLATES)
+        
+        # Calculate the event start date (randomly in years 2-4)
+        # Year 1 starts at self.current_time, so year 2 starts 365 days later
+        min_offset_days = 365       # Start of year 2
+        max_offset_days = 365 * 4   # End of year 4
+        
+        # Random day offset
+        offset_days = self.rng.randint(min_offset_days, max_offset_days)
+        start_date = self.current_time + timedelta(days=offset_days)
+        
+        return BlackSwanEvent(
+            name=template["name"],
+            start_date=start_date,
+            duration_days=template["duration_days"],
+            demand_multiplier=template["demand_multiplier"],
+            lead_time_multiplier=template["lead_time_multiplier"],
+            affected_countries=template["affected_countries"],
+        )
+
+    def _log_black_swan_start(self) -> None:
+        """Log the creation of a black swan event."""
+        if not self._black_swan_event:
+            return
+        
+        self._log_event(
+            "BlackSwanEventScheduled",
+            {
+                "name": self._black_swan_event.name,
+                "start_date": iso_utc(self._black_swan_event.start_date),
+                "end_date": iso_utc(self._black_swan_event.end_date),
+                "duration_days": self._black_swan_event.duration_days,
+                "demand_multiplier": self._black_swan_event.demand_multiplier,
+                "lead_time_multiplier": self._black_swan_event.lead_time_multiplier,
+                "affected_countries": self._black_swan_event.affected_countries,
+            }
+        )
+
+    def _get_black_swan_demand_factor(self) -> float:
+        """Get demand multiplier from active black swan event."""
+        if not self._black_swan_event:
+            return 1.0
+        
+        if self._black_swan_event.is_active(self.current_time):
+            return self._black_swan_event.demand_multiplier
+        
+        return 1.0
+
+    def _get_black_swan_supplier_factor(self, supplier_id: str | None) -> float:
+        """Get lead time multiplier from active black swan event for a supplier's country."""
+        if not self._black_swan_event or not supplier_id:
+            return 1.0
+        
+        if not self._black_swan_event.is_active(self.current_time):
+            return 1.0
+        
+        supplier = self.suppliers_by_id.get(supplier_id, {})
+        country = supplier.get("country")
+        
+        if country and country in self._black_swan_event.affected_countries:
+            return self._black_swan_event.lead_time_multiplier
+        
+        return 1.0
+
+    def _check_black_swan_events(self) -> None:
+        """Check and log black swan event start/end transitions."""
+        if not self._black_swan_event:
+            return
+        
+        # Check if event just started (within the last hour)
+        event_start = self._black_swan_event.start_date
+        if event_start <= self.current_time < event_start + timedelta(hours=1):
+            self._log_event(
+                "BlackSwanEventStarted",
+                {
+                    "name": self._black_swan_event.name,
+                    "affected_countries": self._black_swan_event.affected_countries,
+                    "demand_multiplier": self._black_swan_event.demand_multiplier,
+                    "lead_time_multiplier": self._black_swan_event.lead_time_multiplier,
+                }
+            )
+        
+        # Check if event just ended (within the last hour)
+        event_end = self._black_swan_event.end_date
+        if event_end <= self.current_time < event_end + timedelta(hours=1):
+            self._log_event(
+                "BlackSwanEventEnded",
+                {
+                    "name": self._black_swan_event.name,
+                    "duration_days": self._black_swan_event.duration_days,
+                }
+            )
+
+    def shutdown(self) -> None:
+        """Signal the engine to stop (for graceful shutdown in service mode)."""
+        self.running = False
 
     def _date_in_period(self, month: int, day: int, 
                         start_month: int, start_day: int, 

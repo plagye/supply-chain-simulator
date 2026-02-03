@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
+import signal
 import subprocess
 import sys
-from datetime import datetime, timezone
+import time
+from datetime import datetime, timedelta, timezone
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +19,46 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 SCRIPTS_DIR = BASE_DIR / "scripts"
 DEFAULT_CONFIG_PATH = BASE_DIR / "config.json"
+LOG_FILE = BASE_DIR / "simulation.log"
+
+# Global logger
+logger: logging.Logger | None = None
+
+
+def setup_logging(log_file: Path = LOG_FILE, level: int = logging.INFO) -> logging.Logger:
+    """Set up rotating file-based logging for background service operation."""
+    log = logging.getLogger("simulation")
+    log.setLevel(level)
+    
+    # Avoid duplicate handlers
+    if log.handlers:
+        return log
+    
+    # File handler with rotation (10MB max, keep 5 backups)
+    file_handler = RotatingFileHandler(
+        log_file,
+        maxBytes=10 * 1024 * 1024,
+        backupCount=5,
+        encoding="utf-8",
+    )
+    file_handler.setLevel(level)
+    
+    # Console handler for immediate feedback
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(level)
+    
+    # Format: timestamp - level - message
+    formatter = logging.Formatter(
+        "%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+    
+    log.addHandler(file_handler)
+    log.addHandler(console_handler)
+    
+    return log
 
 
 def parse_start_time(value: str) -> datetime:
@@ -134,8 +178,260 @@ def run_simulation(
     print(f"Simulation complete. Events logged to: {engine.log_path}")
 
 
+def run_history_generation(
+    years: int,
+    seed: int | None,
+    start_time: datetime | None,
+    engine_config: dict[str, Any] | None = None,
+) -> None:
+    """Generate N years of historical data to JSON files.
+    
+    This runs the simulation in accelerated mode (no delays) to build
+    up historical data that can later be manually transferred to PostgreSQL.
+    """
+    if years < 1 or years > 5:
+        print(f"Error: years must be between 1 and 5, got {years}", file=sys.stderr)
+        sys.exit(1)
+    
+    # Calculate total ticks (hours in N years)
+    # Using 365.25 days/year to account for leap years
+    ticks = int(years * 365.25 * 24)
+    include_black_swan = (years == 5)
+    
+    print(f"Generating {years} year(s) of historical data...")
+    print(f"  Total ticks: {ticks:,} ({ticks // 24:,} days)")
+    if include_black_swan:
+        print("  Black swan event: ENABLED (5-year mode)")
+    else:
+        print("  Black swan event: disabled (only enabled for 5-year history)")
+    
+    try:
+        engine = WorldEngine(
+            data_dir=DATA_DIR,
+            seed=seed,
+            start_time=start_time,
+            config=engine_config,
+            output_mode="json",
+            include_black_swan=include_black_swan,
+            simulation_years=years,
+        )
+    except DataLoadError as e:
+        print(f"Error loading data: {e}", file=sys.stderr)
+        print("Hint: Run 'python main.py generate' first to create data files.", file=sys.stderr)
+        sys.exit(1)
+    except ConfigValidationError as e:
+        print(f"Configuration error: {e}", file=sys.stderr)
+        sys.exit(1)
+    
+    # Track progress
+    start_real_time = time.time()
+    last_progress = 0
+    
+    print("\nRunning accelerated simulation...")
+    for i in range(ticks):
+        engine.tick()
+        
+        # Progress indicator every simulated week (168 ticks)
+        progress_pct = int((i + 1) / ticks * 100)
+        if progress_pct >= last_progress + 5:  # Every 5%
+            elapsed = time.time() - start_real_time
+            rate = (i + 1) / elapsed if elapsed > 0 else 0
+            eta_seconds = (ticks - i - 1) / rate if rate > 0 else 0
+            
+            sim_date = engine.current_time.strftime("%Y-%m-%d")
+            print(f"  {progress_pct:3d}% | Sim date: {sim_date} | "
+                  f"Rate: {rate:.0f} ticks/sec | ETA: {eta_seconds / 60:.1f} min")
+            last_progress = progress_pct
+    
+    engine.save_state()
+    
+    elapsed_total = time.time() - start_real_time
+    print(f"\nHistorical data generation complete!")
+    print(f"  Time elapsed: {elapsed_total / 60:.1f} minutes")
+    print(f"  Events logged to: {engine.log_path}")
+    print(f"  Final sim date: {engine.current_time.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+    print("\nNext steps:")
+    print("  1. Review the generated JSON files in the data/ directory")
+    print("  2. Transfer historical data to PostgreSQL using your preferred method")
+    print("  3. Run 'python main.py run-service' to start 24/7 simulation")
+
+
+def run_continuous_service(
+    tick_interval: float,
+    resume: bool,
+    seed: int | None,
+    engine_config: dict[str, Any] | None = None,
+) -> None:
+    """Run simulation as a continuous 24/7 service.
+    
+    Events are written directly to PostgreSQL. State is persisted
+    after each tick for resume capability.
+    """
+    global logger
+    logger = setup_logging()
+    
+    logger.info("=" * 60)
+    logger.info("Starting Supply Chain Simulation Service")
+    logger.info("=" * 60)
+    
+    start_time: datetime | None = None
+    initial_tick_count = 0
+    
+    # Try to resume from database state
+    if resume:
+        try:
+            from scripts.db_manager import load_system_state, test_connection
+            
+            if not test_connection():
+                logger.error("Database connection failed. Check your .env configuration.")
+                logger.info("Hint: Ensure DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD are set.")
+                sys.exit(1)
+            
+            state = load_system_state()
+            if state:
+                start_time = state["current_simulation_time"]
+                initial_tick_count = state["tick_count"]
+                logger.info(f"Resuming from saved state:")
+                logger.info(f"  Simulation time: {start_time}")
+                logger.info(f"  Tick count: {initial_tick_count:,}")
+            else:
+                logger.info("No saved state found. Starting fresh simulation.")
+        except ImportError as e:
+            logger.warning(f"Database module not available: {e}")
+            logger.info("Starting fresh simulation without resume capability.")
+        except Exception as e:
+            logger.warning(f"Could not load state from database: {e}")
+            logger.info("Starting fresh simulation.")
+    else:
+        logger.info("Starting fresh simulation (--fresh mode)")
+    
+    # Create engine
+    try:
+        engine = WorldEngine(
+            data_dir=DATA_DIR,
+            seed=seed,
+            start_time=start_time,
+            config=engine_config,
+            output_mode="database",
+        )
+        engine.tick_count = initial_tick_count
+    except DataLoadError as e:
+        logger.error(f"Error loading data: {e}")
+        logger.info("Hint: Run 'python main.py generate' first to create data files.")
+        sys.exit(1)
+    except ConfigValidationError as e:
+        logger.error(f"Configuration error: {e}")
+        sys.exit(1)
+    
+    # Set up graceful shutdown
+    def handle_shutdown(signum, frame):
+        logger.info(f"Received signal {signum}. Initiating graceful shutdown...")
+        engine.shutdown()
+    
+    signal.signal(signal.SIGTERM, handle_shutdown)
+    signal.signal(signal.SIGINT, handle_shutdown)
+    
+    logger.info(f"Service configuration:")
+    logger.info(f"  Tick interval: {tick_interval} seconds")
+    logger.info(f"  Output mode: database")
+    logger.info(f"  Starting simulation time: {engine.current_time}")
+    logger.info("")
+    logger.info("Service is running. Press Ctrl+C to stop.")
+    
+    # Import db_manager for state persistence (optional)
+    db_manager = None
+    try:
+        from scripts import db_manager as dbm
+        db_manager = dbm
+    except ImportError:
+        logger.warning("Database module not available. State will not be persisted.")
+    
+    # Main service loop
+    ticks_since_log = 0
+    while engine.running:
+        try:
+            tick_start = time.time()
+            
+            # Run one simulation tick
+            engine.tick()
+            ticks_since_log += 1
+            
+            # Save state to database
+            if db_manager:
+                try:
+                    db_manager.save_system_state(
+                        engine.current_time,
+                        engine.tick_count,
+                        status="running"
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to save state: {e}")
+            
+            # Log progress every 24 ticks (1 simulated day)
+            if ticks_since_log >= 24:
+                logger.info(
+                    f"Tick {engine.tick_count:,} | "
+                    f"Sim time: {engine.current_time.strftime('%Y-%m-%d %H:%M')} | "
+                    f"Day {engine.tick_count // 24:,}"
+                )
+                ticks_since_log = 0
+            
+            # Sleep for the configured interval
+            tick_duration = time.time() - tick_start
+            sleep_time = max(0, tick_interval - tick_duration)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+                
+        except Exception as e:
+            logger.error(f"Error during tick {engine.tick_count}: {e}", exc_info=True)
+            # Continue running despite errors
+            time.sleep(tick_interval)
+    
+    # Graceful shutdown
+    logger.info("Shutting down...")
+    
+    # Save final state
+    if db_manager:
+        try:
+            db_manager.save_system_state(
+                engine.current_time,
+                engine.tick_count,
+                status="stopped"
+            )
+            logger.info("Final state saved to database.")
+        except Exception as e:
+            logger.error(f"Failed to save final state: {e}")
+    
+    # Save to JSON as backup
+    try:
+        engine.save_state()
+        logger.info(f"State saved to JSON: {engine.log_path.parent}")
+    except Exception as e:
+        logger.error(f"Failed to save JSON state: {e}")
+    
+    logger.info(f"Service stopped. Final tick count: {engine.tick_count:,}")
+    logger.info(f"Final simulation time: {engine.current_time}")
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Supply chain simulator CLI")
+    parser = argparse.ArgumentParser(
+        description="Supply chain simulator CLI",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Commands:
+  generate         Generate all master data files
+  simulate         Run simulation for a fixed number of ticks
+  all              Generate data then run simulation
+  generate-history Generate N years of historical data to JSON
+  run-service      Run as a continuous 24/7 service (writes to PostgreSQL)
+
+Examples:
+  python main.py generate --seed 42
+  python main.py simulate --ticks 720 --seed 42
+  python main.py generate-history --years 3 --seed 42
+  python main.py run-service --tick-interval 5 --resume
+        """
+    )
     parser.add_argument(
         "--config",
         type=Path,
@@ -144,10 +440,12 @@ def main() -> int:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
+    # generate command
     gen = sub.add_parser("generate", help="Generate all data files")
     gen.add_argument("--seed", type=int, default=None, help="Seed for generators.")
 
-    sim = sub.add_parser("simulate", help="Run the simulator")
+    # simulate command
+    sim = sub.add_parser("simulate", help="Run the simulator for fixed ticks")
     sim.add_argument("--ticks", type=int, default=None, help="Number of hourly ticks to run.")
     sim.add_argument("--seed", type=int, default=None, help="Simulation RNG seed.")
     sim.add_argument(
@@ -157,6 +455,7 @@ def main() -> int:
         help="ISO-8601 start time (e.g., 2026-02-02T08:00:00Z).",
     )
 
+    # all command (generate + simulate)
     both = sub.add_parser("all", help="Generate all data then run the simulator")
     both.add_argument("--ticks", type=int, default=None, help="Number of hourly ticks to run.")
     both.add_argument("--seed", type=int, default=None, help="Seed for generators and simulator.")
@@ -166,6 +465,50 @@ def main() -> int:
         default=None,
         help="ISO-8601 start time (e.g., 2026-02-02T08:00:00Z).",
     )
+
+    # generate-history command (NEW)
+    hist = sub.add_parser(
+        "generate-history",
+        help="Generate N years of historical data to JSON files"
+    )
+    hist.add_argument(
+        "--years",
+        type=int,
+        required=True,
+        choices=[1, 2, 3, 4, 5],
+        help="Number of years of history to generate (1-5). Black swan events only for 5 years.",
+    )
+    hist.add_argument("--seed", type=int, default=None, help="Simulation RNG seed.")
+    hist.add_argument(
+        "--start-time",
+        type=str,
+        default=None,
+        help="ISO-8601 start time for historical data (default: N years before now).",
+    )
+
+    # run-service command (NEW)
+    svc = sub.add_parser(
+        "run-service",
+        help="Run as a continuous 24/7 service (writes to PostgreSQL)"
+    )
+    svc.add_argument(
+        "--tick-interval",
+        type=float,
+        default=5.0,
+        help="Seconds between simulation ticks (default: 5.0).",
+    )
+    svc.add_argument(
+        "--resume",
+        action="store_true",
+        default=True,
+        help="Resume from saved database state (default).",
+    )
+    svc.add_argument(
+        "--fresh",
+        action="store_true",
+        help="Start fresh, ignoring any saved state.",
+    )
+    svc.add_argument("--seed", type=int, default=None, help="Simulation RNG seed.")
 
     args = parser.parse_args()
     config_path = args.config or (DEFAULT_CONFIG_PATH if DEFAULT_CONFIG_PATH.exists() else None)
@@ -206,9 +549,50 @@ def main() -> int:
         run_simulation(ticks=ticks, seed=seed, start_time=start_time, engine_config=engine_config)
         return 0
 
+    if args.command == "generate-history":
+        section = config.get("generate-history", {})
+        years = args.years  # Required, no fallback
+        seed = resolve_value(args.seed, section, "seed", 42)
+        start_raw = resolve_value(args.start_time, section, "start_time", None)
+        engine_config = section.get("engine", {})
+        
+        # Default start time: N years before now
+        if start_raw:
+            try:
+                start_time = parse_start_time(start_raw)
+            except ValueError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                return 1
+        else:
+            start_time = datetime.now(timezone.utc) - timedelta(days=years * 365)
+        
+        run_history_generation(
+            years=years,
+            seed=seed,
+            start_time=start_time,
+            engine_config=engine_config
+        )
+        return 0
+
+    if args.command == "run-service":
+        section = config.get("run-service", {})
+        tick_interval = resolve_value(args.tick_interval, section, "tick_interval", 5.0)
+        seed = resolve_value(args.seed, section, "seed", 42)
+        engine_config = section.get("engine", {})
+        
+        # --fresh overrides --resume
+        resume = not args.fresh
+        
+        run_continuous_service(
+            tick_interval=tick_interval,
+            resume=resume,
+            seed=seed,
+            engine_config=engine_config
+        )
+        return 0
+
     return 1
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

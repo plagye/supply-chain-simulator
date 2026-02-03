@@ -43,11 +43,27 @@ Customers are split into two tiers:
 
 ### The Challenges You'll Analyze
 
-- **Demand seasonality**: Q4 surge, summer lull, end-of-quarter rushes
+- **Demand seasonality**: Q4 surge, summer lull, end-of-quarter rushes, Friday spikes
 - **Supplier disruptions**: CNY shuts down Asian suppliers for weeks
 - **Cost volatility**: Raw material prices drift ±20% over time
 - **Quality issues**: 1-5% of incoming parts fail inspection
 - **Backorders**: When demand exceeds supply, orders split across multiple shipments
+- **Black swan events**: Major disruptions (5-year historical data only)
+
+---
+
+## Quick Start
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Generate master data
+python main.py generate
+
+# Run simulation for 30 days (720 hours)
+python main.py simulate --ticks 720
+```
 
 ---
 
@@ -61,34 +77,145 @@ This simulator generates realistic supply chain events including:
 - Quality issues and partial shipments
 - **Split shipments and backorders** (SQL join complexity)
 - **Cost variation** (commodity drift + supplier pricing)
-- **Seasonal patterns** (CNY, holidays, end-of-quarter)
+- **Seasonal patterns** (CNY, holidays, end-of-quarter, day-of-week)
+- **Black swan events** (major disruptions for 5-year history)
 - **Data corruption** (1% of events corrupted for error handling practice)
 
 **Your job as data engineer:** Parse the raw JSONL event log (including corrupted records!), design your own schema, join events together, and build dashboards.
 
+---
+
 ## Project Layout
 
-- `scripts/` - Generator scripts and simulation engine (`world_engine.py`)
-- `data/` - Generated JSON datasets and runtime state
-- `main.py` - Single entry-point CLI
-- `config.json` - Configuration defaults
+```
+supply-chain-simulator/
+├── main.py                 # CLI entry point
+├── config.json             # Configuration defaults
+├── requirements.txt        # Python dependencies
+├── .env.example            # Database credentials template
+├── scripts/
+│   ├── world_engine.py     # Core simulation engine
+│   ├── db_manager.py       # PostgreSQL database operations
+│   └── generate_*.py       # Data generator scripts
+├── data/
+│   ├── *.json              # Master data and state files
+│   └── *.jsonl             # Event logs
+└── sql/
+    └── schema.sql          # PostgreSQL schema definition
+```
+
+---
+
+## Commands
+
+### 1) Generate Master Data
+
+```bash
+python main.py generate [--seed 42]
+```
+
+Creates all master data files (suppliers, parts, BOM, customers, inventory, production schedule).
+
+### 2) Run Simulation (Batch Mode)
+
+```bash
+python main.py simulate [--ticks 720] [--seed 42] [--start-time 2026-02-02T08:00:00Z]
+```
+
+Runs simulation for a fixed number of ticks (each tick = 1 hour). Events are written to JSON files.
+
+### 3) Generate + Simulate
+
+```bash
+python main.py all [--ticks 720] [--seed 42]
+```
+
+Combines `generate` and `simulate` in one command.
+
+### 4) Generate Historical Data (NEW)
+
+```bash
+python main.py generate-history --years 3 [--seed 42]
+```
+
+Generates 1-5 years of historical data in accelerated mode. Events are written to JSON files for manual transfer to PostgreSQL.
+
+**Options:**
+- `--years` (required): 1-5 years of history
+- `--seed`: RNG seed for reproducibility
+- `--start-time`: Start date (default: N years before now)
+
+**Note:** Black swan events are only included when generating 5 years of history.
+
+### 5) Run 24/7 Service (NEW)
+
+```bash
+python main.py run-service [--tick-interval 5] [--resume|--fresh] [--seed 42]
+```
+
+Runs the simulation as a continuous service. Events are written directly to PostgreSQL.
+
+**Options:**
+- `--tick-interval`: Seconds between ticks (default: 5.0)
+- `--resume`: Resume from saved database state (default)
+- `--fresh`: Start fresh, ignoring saved state
+- `--seed`: RNG seed
+
+**Time behavior:**
+| tick-interval | Speed | 1 sim day | 1 sim month |
+|---------------|-------|-----------|-------------|
+| 5 (default) | Fast | 2 min | ~1 hour |
+| 60 | Moderate | 24 min | ~12 hours |
+| 3600 | Real-time | 24 hours | 30 days |
+
+---
+
+## Database Setup (PostgreSQL)
+
+### 1) Create Database
+
+```sql
+CREATE DATABASE supply_chain;
+```
+
+### 2) Run Schema Script
+
+```bash
+psql -h <host> -U <user> -d supply_chain -f sql/schema.sql
+```
+
+### 3) Configure Credentials
+
+Copy `.env.example` to `.env` and fill in your values:
+
+```env
+DB_HOST=your-postgres-host.postgres.database.azure.com
+DB_PORT=5432
+DB_NAME=supply_chain
+DB_USER=your_username
+DB_PASSWORD=your_password
+DB_SSLMODE=require
+```
+
+---
 
 ## Config File
 
-`config.json` sits at the repo root and supplies defaults for the CLI.
-CLI flags always override config values.
+`config.json` supplies defaults for the CLI. CLI flags always override config values.
 
-### Basic Config Fields
+### Basic Fields
 
-- `generate.seed`: RNG seed for all generators
-- `simulate.ticks`: number of hourly ticks to run
-- `simulate.seed`: RNG seed for the simulator
-- `simulate.start_time`: ISO-8601 start time (e.g. `2026-02-02T08:00:00Z`) or `null`
-- `all.*`: same fields as `simulate`, used when running `main.py all`
+| Section | Key | Description |
+|---------|-----|-------------|
+| `generate` | `seed` | RNG seed for generators |
+| `simulate` | `ticks` | Number of hourly ticks |
+| `simulate` | `seed` | RNG seed for simulation |
+| `simulate` | `start_time` | ISO-8601 start time |
+| `run-service` | `tick_interval` | Seconds between ticks |
 
 ### Engine Config (Simulation Parameters)
 
-The `simulate.engine` and `all.engine` sections control simulation behavior:
+The `simulate.engine` section controls simulation behavior:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -112,62 +239,76 @@ The `simulate.engine` and `all.engine` sections control simulation behavior:
 | `demand_seasonality_strength` | 1.0 | Demand seasonality intensity (0-1) |
 | `supplier_seasonality_strength` | 1.0 | Supplier seasonality intensity (0-1) |
 
-## Commands
+---
 
-### 1) Generate all data
+## Seasonality Features
 
-```bash
-python main.py generate
-```
+### Monthly Demand Patterns
 
-Override config:
-```bash
-python main.py generate --seed 123
-```
+| Month | Multiplier | Reason |
+|-------|------------|--------|
+| January | 0.8x | Post-holiday slump |
+| February | 0.85x | Recovery |
+| March-May | 1.0-1.05x | Normal/Spring |
+| June-August | 0.85-0.9x | Summer lull |
+| September | 1.1x | Back to business |
+| October | 1.2x | Q4 ramp |
+| November | 1.4x | Peak season |
+| December | 1.3x | Holiday orders |
 
-### 2) Run the simulator
+### Day-of-Week Effects
 
-```bash
-python main.py simulate
-```
+| Day | Multiplier | Pattern |
+|-----|------------|---------|
+| Monday | 0.85x | Slow start |
+| Tuesday | 0.95x | Ramping up |
+| Wednesday | 1.0x | Baseline |
+| Thursday | 1.05x | Building momentum |
+| Friday | 1.25x | End-of-week rush |
+| Saturday | 0.6x | Reduced activity |
+| Sunday | 0.4x | Minimal |
 
-Override config:
-```bash
-python main.py simulate --ticks 48 --seed 7 --start-time 2026-02-02T08:00:00Z
-```
+### Period-End Spikes
 
-### 3) Generate everything and simulate
+- **Month-end** (last 3 days): +20% demand
+- **Quarter-end** (Mar, Jun, Sep, Dec last 5 days): Additional +15%
 
-```bash
-python main.py all
-```
+### Black Swan Events (5-year history only)
 
-Override config:
-```bash
-python main.py all --ticks 72 --seed 99
-```
+Random major disruption placed in years 2-4:
 
-## Outputs
+| Event | Duration | Demand | Lead Time | Affected |
+|-------|----------|--------|-----------|----------|
+| Supply Chain Crisis | 21 days | -30% | 2.5x | China, Taiwan |
+| Port Congestion | 30 days | -10% | 2.0x | China, USA |
+| Natural Disaster | 14 days | -50% | 3.0x | Taiwan |
+| Logistics Disruption | 28 days | -20% | 2.2x | China, Germany, USA |
+| Semiconductor Shortage | 25 days | +10% | 3.5x | Taiwan, China |
 
-### Master Data (JSON files)
+---
 
-- `suppliers.json` - Supplier master with reliability scores
-- `parts.json` - Part catalog with costs and valid suppliers
-- `bom.json` - Bill of materials for DRONE-X1
-- `customers.json` - Customer master with contract tiers
-- `inventory.json` - Current inventory state (updated by simulation)
-- `production_schedule.json` - Active jobs (updated by simulation)
+## Output Files
+
+### Master Data (JSON)
+
+| File | Description |
+|------|-------------|
+| `suppliers.json` | Supplier master with reliability scores |
+| `parts.json` | Part catalog with costs and valid suppliers |
+| `bom.json` | Bill of materials for DRONE-X1 |
+| `customers.json` | Customer master with contract tiers |
+| `inventory.json` | Current inventory state (updated by simulation) |
+| `production_schedule.json` | Active jobs (updated by simulation) |
 
 ### Event Log (JSONL)
 
-All simulation events are appended to `data/daily_events_log.jsonl`.
+All simulation events are appended to `data/daily_events_log.jsonl`:
 
-Each event has the structure:
 ```json
 {
   "timestamp": "2026-02-02T08:00:00Z",
-  "event_type": "EventTypeName",
-  "payload": { ... }
+  "event_type": "SalesOrderCreated",
+  "payload": { "order_id": "...", "customer_id": "...", "qty": 3 }
 }
 ```
 
@@ -177,39 +318,81 @@ Each event has the structure:
 |-------|-------------|-------------------|
 | `SalesOrderCreated` | Customer places order | `order_id`, `customer_id`, `product_id`, `qty` |
 | `ShipmentCreated` | Order shipped in full | `order_id`, `product_id`, `qty`, `remaining_stock` |
-| `PartialShipmentCreated` | Partial fulfillment, rest backordered | `order_id`, `qty_shipped`, `qty_backordered` |
+| `PartialShipmentCreated` | Partial fulfillment | `order_id`, `qty_shipped`, `qty_backordered` |
 | `BackorderCreated` | Order cannot be fulfilled | `order_id`, `qty_backordered`, `reason` |
-| `BackorderFulfilled` | Backorder shipped (full or partial) | `order_id`, `qty_shipped`, `qty_still_pending` |
+| `BackorderFulfilled` | Backorder shipped | `order_id`, `qty_shipped`, `qty_still_pending` |
 | `ProductionJobCreated` | New production job | `job_id`, `product_id`, `production_duration_hours` |
-| `ProductionStarted` | Job begins (parts consumed) | `job_id`, `product_id`, `expected_completion` |
-| `ProductionCompleted` | Job finished, product added | `job_id`, `product_id`, `new_qty_on_hand` |
-| `PurchaseOrderCreated` | Parts ordered from supplier | `purchase_order_id`, `part_id`, `qty`, `unit_cost`, `total_cost`, `eta` |
-| `PurchaseOrderReceived` | Parts received into inventory | `purchase_order_id`, `qty_received`, `new_qty_on_hand` |
-| `ReorderTriggered` | Auto-reorder at reorder point | `part_id`, `qty_on_hand`, `reorder_point`, `order_qty` |
-| `PartialShipment` | Supplier delivers less than ordered | `purchase_order_id`, `ordered_qty`, `received_qty` |
-| `QualityRejection` | Parts rejected at inspection | `purchase_order_id`, `qty_rejected`, `supplier_id` |
+| `ProductionStarted` | Job begins | `job_id`, `expected_completion` |
+| `ProductionCompleted` | Job finished | `job_id`, `new_qty_on_hand` |
+| `PurchaseOrderCreated` | Parts ordered | `purchase_order_id`, `part_id`, `qty`, `unit_cost`, `eta` |
+| `PurchaseOrderReceived` | Parts received | `purchase_order_id`, `qty_received`, `new_qty_on_hand` |
+| `ReorderTriggered` | Auto-reorder | `part_id`, `qty_on_hand`, `reorder_point` |
+| `PartialShipment` | Supplier delivers less | `purchase_order_id`, `ordered_qty`, `received_qty` |
+| `QualityRejection` | Parts rejected | `purchase_order_id`, `qty_rejected`, `supplier_id` |
+| `BlackSwanEventStarted` | Major disruption begins | `name`, `affected_countries`, `demand_multiplier` |
+| `BlackSwanEventEnded` | Disruption ends | `name`, `duration_days` |
 
-Note: ~1% of events are intentionally corrupted (invalid JSON, wrong types, etc.) for error handling practice. Check `corruption_meta_log.jsonl` to verify your pipeline catches them.
+---
 
-### Data Engineering Practice
+## Logging
+
+When running as a service (`run-service`), logs are written to `simulation.log` with automatic rotation (10MB max, 5 backups).
+
+Log levels:
+- `INFO`: Normal operation (tick completions, daily summaries)
+- `WARNING`: Recoverable issues (database retry, state save failure)
+- `ERROR`: Failures that may require attention
+
+---
+
+## Data Engineering Practice
 
 The event log is intentionally "messy" - you practice:
-- Parsing JSONL and loading into your tools
-- Joining events (e.g., link `PurchaseOrderCreated` to `PurchaseOrderReceived` via `purchase_order_id`)
+- Parsing JSONL and handling corrupted records (~1% intentionally malformed)
+- Joining events (link `PurchaseOrderCreated` → `PurchaseOrderReceived` via `purchase_order_id`)
 - Building dimensional models and fact tables
 - Calculating metrics (lead times, on-time delivery, inventory turns)
 - Creating dashboards in PowerBI
 
-## Using a Different Config Path
+Check `corruption_meta_log.jsonl` to verify your pipeline catches all corrupted records.
+
+---
+
+## Example Workflows
+
+### Generate 3 Years of History + Start 24/7 Service
 
 ```bash
-python main.py --config path/to/config.json simulate
+# 1. Generate master data
+python main.py generate --seed 42
+
+# 2. Generate 3 years of historical data (to JSON)
+python main.py generate-history --years 3 --seed 42
+
+# 3. (Manual) Transfer historical JSON to PostgreSQL
+
+# 4. Start 24/7 service
+python main.py run-service --tick-interval 5 --fresh
 ```
 
-## Example: Run a Month of Simulation
+### Run a Month of Batch Simulation
 
 ```bash
-# Generate fresh data and run 720 ticks (30 days)
 python main.py all --ticks 720 --seed 42
 ```
 
+---
+
+## Future Roadmap
+
+- **Multiple Products**: Add DRONE-X2, DRONE-PRO with shared components
+- **Shipping Simulation**: Carrier selection, transit tracking, delivery confirmation
+- **Multi-Warehouse**: Regional inventory with transfer orders
+- **API Layer**: REST API for external dashboards (FastAPI)
+- **Alerting**: Email/Slack notifications for stockouts, delays
+
+---
+
+## License
+
+MIT License - See LICENSE file for details.
