@@ -97,11 +97,9 @@ supply-chain-simulator/
 │   ├── world_engine.py     # Core simulation engine
 │   ├── db_manager.py       # PostgreSQL database operations
 │   └── generate_*.py       # Data generator scripts
-├── data/
-│   ├── *.json              # Master data and state files
-│   └── *.jsonl             # Event logs
-└── sql/
-    └── schema.sql          # PostgreSQL schema definition
+└── data/
+    ├── *.json              # Master data and state files
+    └── *.jsonl             # Event logs
 ```
 
 ---
@@ -178,11 +176,30 @@ Runs the simulation as a continuous service. Events are written directly to Post
 CREATE DATABASE supply_chain;
 ```
 
-### 2) Run Schema Script
+### 2) Design Your Schema (Practice Exercise!)
 
-```bash
-psql -h <host> -U <user> -d supply_chain -f sql/schema.sql
-```
+**This is intentionally left as a learning exercise.** You need to design your own database schema based on the JSON data and event logs. Consider:
+
+**Dimension Tables (master data):**
+- `dim_suppliers` - Supplier info (id, name, country, reliability_score, etc.)
+- `dim_parts` - Part catalog (id, name, category, cost, unit_of_measure)
+- `dim_customers` - Customer info (id, company_name, region, contract_priority)
+- `dim_products` - Finished goods (just DRONE-X1 for now)
+
+**Fact Tables (transactional, grows over time):**
+- `fact_events` - All simulation events (timestamp, event_type, payload as JSONB)
+- `fact_inventory_snapshots` - Periodic inventory levels
+- `fact_sales_orders` - Denormalized sales order history
+- `fact_purchase_orders` - Denormalized PO history
+
+**State Table (for 24/7 service):**
+- `system_state` - Current simulation time and tick count for resume capability
+
+**Tips:**
+- Look at the JSON files in `data/` for field names and data types
+- Parse `daily_events_log.jsonl` to understand event structures
+- Use JSONB for flexible payload storage, or normalize into separate columns
+- Add appropriate indexes for timestamp and foreign key columns
 
 ### 3) Configure Credentials
 
@@ -347,14 +364,31 @@ Log levels:
 
 ## Data Engineering Practice
 
-The event log is intentionally "messy" - you practice:
-- Parsing JSONL and handling corrupted records (~1% intentionally malformed)
-- Joining events (link `PurchaseOrderCreated` → `PurchaseOrderReceived` via `purchase_order_id`)
-- Building dimensional models and fact tables
-- Calculating metrics (lead times, on-time delivery, inventory turns)
-- Creating dashboards in PowerBI
+This simulator is designed to give you real-world data engineering challenges:
 
-Check `corruption_meta_log.jsonl` to verify your pipeline catches all corrupted records.
+**Schema Design:**
+- Design your own PostgreSQL schema from scratch
+- Decide between normalized vs. denormalized structures
+- Choose appropriate data types and indexes
+
+**Data Pipeline:**
+- Parse JSONL and handle corrupted records (~1% intentionally malformed)
+- Load JSON master data into dimension tables
+- Stream events from JSONL to fact tables
+
+**Data Modeling:**
+- Join events (link `PurchaseOrderCreated` → `PurchaseOrderReceived` via `purchase_order_id`)
+- Build dimensional models (star schema) for analytics
+- Handle slowly changing dimensions (supplier reliability changes over time)
+
+**Analytics:**
+- Calculate metrics (lead times, on-time delivery, inventory turns)
+- Identify seasonality patterns in the data
+- Create dashboards in PowerBI, Tableau, or Metabase
+
+**Error Handling:**
+- Check `corruption_meta_log.jsonl` to verify your pipeline catches all corrupted records
+- Build robust ETL that doesn't fail on bad data
 
 ---
 
@@ -382,17 +416,3 @@ python main.py all --ticks 720 --seed 42
 ```
 
 ---
-
-## Future Roadmap
-
-- **Multiple Products**: Add DRONE-X2, DRONE-PRO with shared components
-- **Shipping Simulation**: Carrier selection, transit tracking, delivery confirmation
-- **Multi-Warehouse**: Regional inventory with transfer orders
-- **API Layer**: REST API for external dashboards (FastAPI)
-- **Alerting**: Email/Slack notifications for stockouts, delays
-
----
-
-## License
-
-MIT License - See LICENSE file for details.
