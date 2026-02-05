@@ -73,14 +73,14 @@ def init_tables():
         # FACT
         """CREATE TABLE IF NOT EXISTS fact_events (
             event_id BIGSERIAL PRIMARY KEY,
-            timestamp TIMESTAMPZ NOT NULL,
+            timestamp TIMESTAMPTZ NOT NULL,
             event_type VARCHAR(100) NOT NULL,
             payload JSONB
         );
         """,
         """CREATE TABLE IF NOT EXISTS fact_inventory_snapshots (
             snapshot_id BIGSERIAL PRIMARY KEY,
-            timestamp TIMESTAMPZ NOT NULL,
+            timestamp TIMESTAMPTZ NOT NULL,
             part_id VARCHAR(50) REFERENCES dim_parts(part_id),
             qty_on_hand INTEGER
         );
@@ -88,7 +88,7 @@ def init_tables():
         """CREATE TABLE IF NOT EXISTS fact_orders (
             order_id VARCHAR(100) PRIMARY KEY,
             customer_id UUID REFERENCES dim_customers(customer_id),
-            order_date TIMESTAMPZ,
+            order_date TIMESTAMPTZ,
             total_amount DECIMAL(12,2),
             status VARCHAR(50)
         );
@@ -96,7 +96,7 @@ def init_tables():
         # STATE
         """CREATE TABLE IF NOT EXISTS system_state (
             id INTEGER PRIMARY KEY DEFAULT 1,
-            current_simulation_time TIMESTAMPZ,
+            current_simulation_time TIMESTAMPTZ,
             tick_count BIGINT DEFAULT 0,
             status VARCHAR(20) DEFAULT 'stopped',
             CONSTRAINT single_row_const CHECK (id = 1)
