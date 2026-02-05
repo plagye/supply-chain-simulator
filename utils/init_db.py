@@ -24,7 +24,7 @@ SSL_ARGS = {"sslmode": "require"}
 
 def get_engine(db_name):
     conn_str = f"postgresql://{DB_CONFIG['user']}:{encoded_password}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{db_name}"
-    engine =create_engine(conn_str, connect_args=SSL_ARGS)
+    engine = create_engine(conn_str, connect_args=SSL_ARGS)
     return engine
 
 
@@ -48,7 +48,7 @@ def init_tables():
             country VARCHAR(100),
             reliability_score DECIMAL(3,2),
             risk_factor VARCHAR(50),
-            price_multiplier DECIMAL(4,2),
+            price_multiplier DECIMAL(4,2)
         );
         """,
         """CREATE TABLE IF NOT EXISTS dim_customers (
@@ -57,7 +57,7 @@ def init_tables():
             region VARCHAR(100),
             contract_priority VARCHAR(50),
             shipping_address VARCHAR(500),
-            penalty_clauses JSONB,
+            penalty_clauses JSONB
         );
         """,
         """CREATE TABLE IF NOT EXISTS dim_parts (
@@ -75,7 +75,7 @@ def init_tables():
             event_id BIGSERIAL PRIMARY KEY,
             timestamp TIMESTAMPZ NOT NULL,
             event_type VARCHAR(100) NOT NULL,
-            payload JSONB,
+            payload JSONB
         );
         """,
         """CREATE TABLE IF NOT EXISTS fact_inventory_snapshots (
