@@ -106,12 +106,14 @@ def init_tables():
             current_simulation_time TIMESTAMPTZ,
             tick_count BIGINT DEFAULT 0,
             status VARCHAR(20) DEFAULT 'stopped',
+            last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, 
             CONSTRAINT single_row_const CHECK (id = 1)
         );
         """
     ]
 
     try:
+        engine = get_engine(DB_CONFIG['database'])
         with engine.connect() as conn:
             trans = conn.begin()
             for sql in ddl_statements:
