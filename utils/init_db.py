@@ -42,7 +42,8 @@ def init_tables():
 
     ddl_statements = [
         # DIM
-        """CREATE TABLE IF NOT EXISTS dim_suppliers (
+        """
+            CREATE TABLE IF NOT EXISTS dim_suppliers (
             supplier_id UUID PRIMARY KEY,
             name VARCHAR(255),
             country VARCHAR(100),
@@ -51,7 +52,8 @@ def init_tables():
             price_multiplier DECIMAL(4,2)
         );
         """,
-        """CREATE TABLE IF NOT EXISTS dim_customers (
+        """
+            CREATE TABLE IF NOT EXISTS dim_customers (
             customer_id UUID PRIMARY KEY,
             company_name VARCHAR(255),
             region VARCHAR(100),
@@ -60,7 +62,8 @@ def init_tables():
             penalty_clauses JSONB
         );
         """,
-        """CREATE TABLE IF NOT EXISTS dim_parts (
+        """
+            CREATE TABLE IF NOT EXISTS dim_parts (
             part_id VARCHAR(50) PRIMARY KEY,
             name VARCHAR(255),
             category VARCHAR(100),
@@ -71,21 +74,24 @@ def init_tables():
         );
         """,
         # FACT
-        """CREATE TABLE IF NOT EXISTS fact_events (
+        """
+            CREATE TABLE IF NOT EXISTS fact_events (
             event_id BIGSERIAL PRIMARY KEY,
             timestamp TIMESTAMPTZ NOT NULL,
             event_type VARCHAR(100) NOT NULL,
             payload JSONB
         );
         """,
-        """CREATE TABLE IF NOT EXISTS fact_inventory_snapshots (
+        """
+            CREATE TABLE IF NOT EXISTS fact_inventory_snapshots (
             snapshot_id BIGSERIAL PRIMARY KEY,
             timestamp TIMESTAMPTZ NOT NULL,
             part_id VARCHAR(50) REFERENCES dim_parts(part_id),
             qty_on_hand INTEGER
         );
         """,
-        """CREATE TABLE IF NOT EXISTS fact_orders (
+        """
+            CREATE TABLE IF NOT EXISTS fact_orders (
             order_id VARCHAR(100) PRIMARY KEY,
             customer_id UUID REFERENCES dim_customers(customer_id),
             order_date TIMESTAMPTZ,
@@ -94,7 +100,8 @@ def init_tables():
         );
         """,
         # STATE
-        """CREATE TABLE IF NOT EXISTS system_state (
+        """
+            CREATE TABLE IF NOT EXISTS system_state (
             id INTEGER PRIMARY KEY DEFAULT 1,
             current_simulation_time TIMESTAMPTZ,
             tick_count BIGINT DEFAULT 0,
@@ -109,6 +116,7 @@ def init_tables():
             trans = conn.begin()
             for sql in ddl_statements:
                 conn.execute(text(sql))
+            trans.commit()
             print("SUCCESS: Tables initialized successfully")
     except Exception as e:
         print(f"Error initializing tables: {e}")
