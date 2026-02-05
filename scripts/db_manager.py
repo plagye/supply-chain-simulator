@@ -18,9 +18,9 @@ Usage:
     event = {"timestamp": "...", "event_type": "...", "payload": {...}}
     insert_event(event)
     
-    # Direct session access
+    # Direct session access (table names via TABLE_* constants)
     with get_session() as session:
-        result = session.execute(text("SELECT COUNT(*) FROM fact_events"))
+        result = session.execute(text(f"SELECT COUNT(*) FROM {TABLE_FACT_EVENTS}"))
 
 Note:
     Requires a .env file with database credentials. See .env.example for template.
@@ -47,6 +47,17 @@ _engine: Engine | None = None
 
 # Logger for database operations
 _logger = logging.getLogger("simulation.db")
+
+# ---------------------------------------------------------------------------
+# Schema naming convention (must match your PostgreSQL tables)
+# ---------------------------------------------------------------------------
+TABLE_FACT_EVENTS = "fact_events"
+TABLE_FACT_INVENTORY_SNAPSHOTS = "fact_inventory_snapshots"
+TABLE_FACT_ORDERS = "fact_orders"
+TABLE_DIM_SUPPLIERS = "dim_suppliers"
+TABLE_DIM_PARTS = "dim_parts"
+TABLE_DIM_CUSTOMERS = "dim_customers"
+TABLE_SYSTEM_STATE = "system_state"
 
 
 def get_engine() -> Engine:
@@ -150,8 +161,8 @@ def insert_event(event: dict[str, Any]) -> int | None:
     try:
         with get_session() as session:
             result = session.execute(
-                text("""
-                    INSERT INTO fact_events (timestamp, event_type, payload)
+                text(f"""
+                    INSERT INTO {TABLE_FACT_EVENTS} (timestamp, event_type, payload)
                     VALUES (:timestamp, :event_type, :payload)
                     RETURNING event_id
                 """),
@@ -203,8 +214,8 @@ def insert_events_batch(events: list[dict[str, Any]]) -> int:
             ]
             
             session.execute(
-                text("""
-                    INSERT INTO fact_events (timestamp, event_type, payload)
+                text(f"""
+                    INSERT INTO {TABLE_FACT_EVENTS} (timestamp, event_type, payload)
                     VALUES (:timestamp, :event_type, :payload)
                 """),
                 batch_data
@@ -246,8 +257,8 @@ def save_system_state(
         with get_session() as session:
             # Upsert pattern: insert or update the single row
             session.execute(
-                text("""
-                    INSERT INTO system_state (id, current_simulation_time, tick_count, status, last_updated)
+                text(f"""
+                    INSERT INTO {TABLE_SYSTEM_STATE} (id, current_simulation_time, tick_count, status, last_updated)
                     VALUES (1, :current_time, :tick_count, :status, NOW())
                     ON CONFLICT (id) DO UPDATE SET
                         current_simulation_time = :current_time,
@@ -292,9 +303,9 @@ def load_system_state() -> dict[str, Any] | None:
     try:
         with get_session() as session:
             result = session.execute(
-                text("""
+                text(f"""
                     SELECT current_simulation_time, tick_count, status, last_updated
-                    FROM system_state
+                    FROM {TABLE_SYSTEM_STATE}
                     WHERE id = 1
                 """)
             )
@@ -344,8 +355,8 @@ def save_inventory_snapshot(timestamp: datetime, inventory: dict[str, dict]) -> 
             ]
             
             session.execute(
-                text("""
-                    INSERT INTO fact_inventory_snapshots 
+                text(f"""
+                    INSERT INTO {TABLE_FACT_INVENTORY_SNAPSHOTS}
                     (timestamp, item_id, qty_on_hand, reorder_point, safety_stock)
                     VALUES (:timestamp, :item_id, :qty_on_hand, :reorder_point, :safety_stock)
                 """),
@@ -372,8 +383,8 @@ def upsert_dimension_suppliers(suppliers: list[dict]) -> int:
         with get_session() as session:
             for supplier in suppliers:
                 session.execute(
-                    text("""
-                        INSERT INTO dim_suppliers (supplier_id, name, country, reliability_score, risk_factor, price_multiplier)
+                    text(f"""
+                        INSERT INTO {TABLE_DIM_SUPPLIERS} (supplier_id, name, country, reliability_score, risk_factor, price_multiplier)
                         VALUES (:id, :name, :country, :reliability_score, :risk_factor, :price_multiplier)
                         ON CONFLICT (supplier_id) DO UPDATE SET
                             name = :name,
@@ -405,8 +416,8 @@ def upsert_dimension_parts(parts: list[dict]) -> int:
         with get_session() as session:
             for part in parts:
                 session.execute(
-                    text("""
-                        INSERT INTO dim_parts (part_id, name, category, standard_cost, unit_of_measure)
+                    text(f"""
+                        INSERT INTO {TABLE_DIM_PARTS} (part_id, name, category, standard_cost, unit_of_measure)
                         VALUES (:part_id, :name, :category, :standard_cost, :unit_of_measure)
                         ON CONFLICT (part_id) DO UPDATE SET
                             name = :name,
@@ -438,8 +449,8 @@ def upsert_dimension_customers(customers: list[dict]) -> int:
             for customer in customers:
                 penalty_clauses = customer.get("penalty_clauses")
                 session.execute(
-                    text("""
-                        INSERT INTO dim_customers (customer_id, company_name, region, contract_priority, penalty_clauses)
+                    text(f"""
+                        INSERT INTO {TABLE_DIM_CUSTOMERS} (customer_id, company_name, region, contract_priority, penalty_clauses)
                         VALUES (:customer_id, :company_name, :region, :contract_priority, :penalty_clauses)
                         ON CONFLICT (customer_id) DO UPDATE SET
                             company_name = :company_name,
@@ -468,7 +479,7 @@ def get_event_count() -> int:
     """
     try:
         with get_session() as session:
-            result = session.execute(text("SELECT COUNT(*) FROM fact_events"))
+            result = session.execute(text(f"SELECT COUNT(*) FROM {TABLE_FACT_EVENTS}"))
             row = result.fetchone()
             return row[0] if row else 0
     except SQLAlchemyError:
@@ -484,7 +495,7 @@ def get_latest_event_timestamp() -> datetime | None:
     try:
         with get_session() as session:
             result = session.execute(
-                text("SELECT MAX(timestamp) FROM fact_events")
+                text(f"SELECT MAX(timestamp) FROM {TABLE_FACT_EVENTS}")
             )
             row = result.fetchone()
             return row[0] if row and row[0] else None
