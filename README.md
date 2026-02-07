@@ -170,30 +170,7 @@ Runs the simulation as a continuous service. Events are written directly to Post
 
 ## Database Setup (PostgreSQL)
 
-### 1) Create Database
-
-```sql
-CREATE DATABASE supply_chain;
-```
-
-### 2) Design Your Schema (Practice Exercise!)
-
-**This is intentionally left as a learning exercise.** You need to design your own database schema based on the JSON data and event logs. Consider:
-
-**Dimension Tables (master data):**
-- `dim_suppliers` - Supplier info (id, name, country, reliability_score, etc.)
-- `dim_parts` - Part catalog (id, name, category, cost, unit_of_measure)
-- `dim_customers` - Customer info (id, company_name, region, contract_priority)
-- `dim_products` - Finished goods (just DRONE-X1 for now)
-
-**Fact Tables (transactional, grows over time):**
-- `fact_events` - All simulation events (timestamp, event_type, payload as JSONB)
-- `fact_inventory_snapshots` - Periodic inventory levels
-- `fact_sales_orders` - Denormalized sales order history
-- `fact_purchase_orders` - Denormalized PO history
-
-**State Table (for 24/7 service):**
-- `system_state` - Current simulation time and tick count for resume capability
+**This is intentionally left as a learning exercise.** You need to design your own database schema based on the JSON data and event logs.
 
 **Tips:**
 - Look at the JSON files in `data/` for field names and data types
@@ -201,7 +178,7 @@ CREATE DATABASE supply_chain;
 - Use JSONB for flexible payload storage, or normalize into separate columns
 - Add appropriate indexes for timestamp and foreign key columns
 
-### 3) Configure Credentials
+### Configure Credentials
 
 Copy `.env.example` to `.env` and fill in your values:
 
