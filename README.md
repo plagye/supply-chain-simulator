@@ -6,6 +6,8 @@ At first, the simulator was pushing the generated JSON lines straight to the dat
 
 Keep in mind that the JSONs included in the data/ folder of this repo are there just for example/reference. I would suggest just deleting them and generating new static data using the built-in features of the simulation engine.
 
+I'm running the simulation on a Ubuntu Server VM hosted on Azure, and I store all the data in a PostgreSQL Azure server. Feel free to design your own workflow.
+
 ## The Business Scenario
 
 You're the data engineer at **SkyForge Dynamics**, a mid-sized manufacturer of industrial drones. The company produces the **DRONE-X1**, a commercial-grade quadcopter used for surveying, inspection, and delivery applications.
