@@ -1,6 +1,6 @@
 # Supply Chain Simulator
 
-A realistic supply chain simulation for practicing data engineering skills (SQL, Pandas, Excel, PowerBI).
+A realistic supply chain simulation for practicing data engineering skills (SQL, Pandas, Excel, PowerBI). At first, the simulator was pushing the generated JSON lines straight to the database, but I decided that it would be better for the learning experience if the pipeline just generates raw JSON files, and it's the user's mission to create the database and upload data to it. This way, one can even omit the database creation step and just play with the generated data, e.g., using only Pandas.
 
 ## The Business Scenario
 
@@ -47,7 +47,7 @@ Customers are split into two tiers:
 - **Supplier disruptions**: CNY shuts down Asian suppliers for weeks
 - **Cost volatility**: Raw material prices drift ±20% over time
 - **Quality issues**: 1-5% of incoming parts fail inspection
-- **Backorders**: When demand exceeds supply, orders split across multiple shipments
+- **Backorders**: When demand exceeds supply, orders are split across multiple shipments
 - **Black swan events**: Major disruptions (5-year historical data only)
 
 ---
@@ -69,7 +69,7 @@ python main.py simulate --ticks 720
 
 ## Overview
 
-This simulator generates realistic supply chain events including:
+This simulator generates realistic supply chain events, including:
 - Customer demand with business-hour patterns, bulk orders, and **seasonality**
 - Production scheduling with duration modeling
 - Procurement with supplier reliability affecting lead times
