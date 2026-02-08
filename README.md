@@ -4,6 +4,8 @@ A realistic supply chain simulation for practicing data engineering skills (SQL,
 
 At first, the simulator was pushing the generated JSON lines straight to the database, but I decided that it's better for the learning experience when the pipeline just generates raw JSON files, and it's the user's mission to create the database and upload data to it. This way, one can even omit the database creation step and just play with the generated data, e.g., using only Pandas.
 
+Keep in mind that the JSONs included in the data/ folder of this repo are there just for example/reference. I would suggest just deleting them and generating new static data using the built-in features of the simulation engine.
+
 ## The Business Scenario
 
 You're the data engineer at **SkyForge Dynamics**, a mid-sized manufacturer of industrial drones. The company produces the **DRONE-X1**, a commercial-grade quadcopter used for surveying, inspection, and delivery applications.
