@@ -175,7 +175,7 @@ def run_simulation(
             print(f"  Completed {i + 1} ticks ({(i + 1) // 24} days)")
     
     engine.save_state()
-    print(f"Simulation complete. Events logged to: {engine.log_path}")
+    print(f"Simulation complete. Events logged to: date-partitioned files in {engine.events_dir}")
 
 
 def run_history_generation(
@@ -211,7 +211,6 @@ def run_history_generation(
             seed=seed,
             start_time=start_time,
             config=engine_config,
-            output_mode="json",
             include_black_swan=include_black_swan,
             simulation_years=years,
         )
@@ -248,7 +247,7 @@ def run_history_generation(
     elapsed_total = time.time() - start_real_time
     print(f"\nHistorical data generation complete!")
     print(f"  Time elapsed: {elapsed_total / 60:.1f} minutes")
-    print(f"  Events logged to: {engine.log_path}")
+    print(f"  Events logged to: date-partitioned files in {engine.events_dir}")
     print(f"  Final sim date: {engine.current_time.strftime('%Y-%m-%d %H:%M:%S UTC')}")
     print("\nNext steps:")
     print("  1. Review the generated JSON files in the data/ directory")
@@ -264,8 +263,8 @@ def run_continuous_service(
 ) -> None:
     """Run simulation as a continuous 24/7 service.
     
-    Events are written directly to PostgreSQL. State is persisted
-    after each tick for resume capability.
+    Events are written to date-partitioned JSONL (data/events/). State is
+    persisted to PostgreSQL after each tick for resume capability.
     """
     global logger
     logger = setup_logging()
@@ -312,7 +311,6 @@ def run_continuous_service(
             seed=seed,
             start_time=start_time,
             config=engine_config,
-            output_mode="database",
         )
         engine.tick_count = initial_tick_count
     except DataLoadError as e:
@@ -333,7 +331,7 @@ def run_continuous_service(
     
     logger.info(f"Service configuration:")
     logger.info(f"  Tick interval: {tick_interval} seconds")
-    logger.info(f"  Output mode: database")
+    logger.info(f"  Events: JSONL (date-partitioned in data/events/)")
     logger.info(f"  Starting simulation time: {engine.current_time}")
     logger.info("")
     logger.info("Service is running. Press Ctrl+C to stop.")
@@ -405,7 +403,7 @@ def run_continuous_service(
     # Save to JSON as backup
     try:
         engine.save_state()
-        logger.info(f"State saved to JSON: {engine.log_path.parent}")
+        logger.info(f"State saved to JSON: {engine.data_dir}")
     except Exception as e:
         logger.error(f"Failed to save JSON state: {e}")
     

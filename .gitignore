@@ -41,7 +41,9 @@ env/
 Thumbs.db
 desktop.ini
 
-# Simulation output (regenerated on each run)
+# Simulation output (date-partitioned event JSONL and corruption meta)
+data/events/
+# Legacy single-file logs (no longer used; kept so they are not committed if present)
 data/daily_events_log.jsonl
 data/corruption_meta_log.jsonl
 

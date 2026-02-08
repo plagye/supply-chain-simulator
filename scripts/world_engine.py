@@ -16,7 +16,7 @@ Key Features:
     - Production job management with BOM consumption
     - Automatic reorder point triggers
     - Black swan event support for historical data generation
-    - Dual output mode: JSON files or PostgreSQL database
+    - Events written to date-partitioned JSONL (data/events/YYYY-MM-DD.jsonl)
 
 Usage:
     from scripts.world_engine import WorldEngine
@@ -27,8 +27,8 @@ Usage:
         engine.tick()
     engine.save_state()
     
-    # 24/7 service mode
-    engine = WorldEngine(output_mode="database")
+    # 24/7 service mode (events to JSONL; state to PostgreSQL)
+    engine = WorldEngine()
     while engine.running:
         engine.tick()
         time.sleep(5)
@@ -43,12 +43,14 @@ Author: SkyForge Dynamics Data Engineering Team
 from __future__ import annotations
 
 import atexit
+import io
 import json
+import os
 import random
 import re
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -297,23 +299,26 @@ class WorldEngine:
         data_dir: Path | None = None,
         seed: int | None = 42,
         start_time: datetime | None = None,
-        log_path: Path | None = None,
         config: dict[str, Any] | None = None,
-        output_mode: str = "json",
         include_black_swan: bool = False,
         simulation_years: int = 1,
     ) -> None:
         self.data_dir = data_dir or DATA_DIR
         self.rng = random.Random(seed)
         self.current_time = start_time or datetime.now(timezone.utc)
-        self.log_path = log_path or (self.data_dir / "daily_events_log.jsonl")
-        self.output_mode = output_mode  # "json" or "database"
         self.tick_count = 0
         self.running = True  # For service mode graceful shutdown
         
         # Merge provided config with defaults
         self.config = {**DEFAULT_CONFIG, **(config or {})}
         self._validate_config()
+
+        # Events directory (date-partitioned JSONL); config or env EVENTS_DIR, default data/events
+        events_dir_raw = self.config.get("events_dir") or os.environ.get("EVENTS_DIR", "data/events")
+        self.events_dir = Path(events_dir_raw) if Path(events_dir_raw).is_absolute() else BASE_DIR / events_dir_raw
+        self._events_current_day: date | None = None
+        self._events_file: io.TextIOWrapper | None = None
+        self._corruption_log_path = self.events_dir / "_meta" / "corruption_meta_log.jsonl"
 
         # Master data (loaded once)
         self.suppliers = load_json(self.data_dir / "suppliers.json")
@@ -341,9 +346,6 @@ class WorldEngine:
         # Cost drift tracking (random walk for each part)
         self._cost_drift: dict[str, float] = {}  # part_id -> drift multiplier (-0.2 to +0.2)
         self._last_cost_drift_day: int = -1  # Track last day we applied drift
-        
-        # Corruption tracking (for meta-log)
-        self._corruption_log_path = self.data_dir / "corruption_meta_log.jsonl"
         
         # Black swan event (only for 5-year historical generation)
         self._black_swan_event: BlackSwanEvent | None = None
@@ -393,57 +395,34 @@ class WorldEngine:
             self.inventory = {}
 
     def _log_event(self, event_type: str, payload: dict[str, Any]) -> None:
-        """Log an event to JSON file or database based on output_mode."""
+        """Log an event to date-partitioned JSONL (data/events/YYYY-MM-DD.jsonl)."""
         event = {
             "timestamp": iso_utc(self.current_time),
             "event_type": event_type,
             "payload": payload,
         }
-        
-        if self.output_mode == "database":
-            self._log_event_to_database(event)
-        else:
-            self._log_event_to_json(event)
-
-    def _log_event_to_database(self, event: dict[str, Any]) -> None:
-        """Insert an event into the PostgreSQL database."""
-        try:
-            from scripts.db_manager import insert_event
-            result = insert_event(event)
-            if result is None:
-                # Fallback to JSON on database failure
-                import sys
-                print(f"Warning: Failed to insert event to database, falling back to JSON", 
-                      file=sys.stderr)
-                self._log_event_to_json(event)
-        except ImportError:
-            # db_manager not available, fall back to JSON
-            import sys
-            print("Warning: Database module not available, falling back to JSON", 
-                  file=sys.stderr)
-            self._log_event_to_json(event)
-        except Exception as e:
-            import sys
-            print(f"Warning: Database error: {e}, falling back to JSON", file=sys.stderr)
-            self._log_event_to_json(event)
+        self._log_event_to_json(event)
 
     def _log_event_to_json(self, event: dict[str, Any]) -> None:
-        """Append an event to the JSONL log file."""
-        # Convert to JSON string
+        """Append an event to the date-partitioned JSONL file for the current simulation day."""
         json_line = json.dumps(event, ensure_ascii=False)
-        
-        # Maybe corrupt the data (for error handling practice)
-        if (self.config.get("data_corruption_enabled", False) and 
+        if (self.config.get("data_corruption_enabled", False) and
             self.rng.random() < self.config.get("data_corruption_probability", 0.01)):
             json_line, corruption_type = self._corrupt_json_line(json_line, event["event_type"])
             self._log_corruption_meta(event["event_type"], corruption_type)
-        
         try:
-            self.log_path.parent.mkdir(parents=True, exist_ok=True)
-            with self.log_path.open("a", encoding="utf-8") as handle:
-                handle.write(json_line + "\n")
+            self.events_dir.mkdir(parents=True, exist_ok=True)
+            day = self.current_time.date()
+            if self._events_current_day != day:
+                if self._events_file is not None:
+                    self._events_file.close()
+                    self._events_file = None
+                self._events_current_day = day
+                path = self.events_dir / f"{day:%Y-%m-%d}.jsonl"
+                self._events_file = path.open("a", encoding="utf-8")
+            self._events_file.write(json_line + "\n")
+            self._events_file.flush()
         except IOError as e:
-            # Log to stderr but don't crash the simulation
             import sys
             print(f"Warning: Failed to write event log: {e}", file=sys.stderr)
 
@@ -527,6 +506,7 @@ class WorldEngine:
             "corruption_type": corruption_type,
         }
         try:
+            self._corruption_log_path.parent.mkdir(parents=True, exist_ok=True)
             with self._corruption_log_path.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(meta_event, ensure_ascii=False) + "\n")
         except IOError:
@@ -1433,7 +1413,14 @@ class WorldEngine:
         )
 
     def save_state(self) -> None:
-        """Persist dynamic state to disk on exit."""
+        """Persist dynamic state to disk on exit. Close events file handle if open."""
+        if self._events_file is not None:
+            try:
+                self._events_file.close()
+            except IOError:
+                pass
+            self._events_file = None
+            self._events_current_day = None
         try:
             (self.data_dir / "inventory.json").write_text(
                 json.dumps(self.inventory, indent=2, ensure_ascii=False) + "\n",

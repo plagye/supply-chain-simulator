@@ -81,7 +81,7 @@ This simulator generates realistic supply chain events including:
 - **Black swan events** (major disruptions for 5-year history)
 - **Data corruption** (1% of events corrupted for error handling practice)
 
-**Your job as data engineer:** Parse the raw JSONL event log (including corrupted records!), design your own schema, join events together, and build dashboards.
+**Your job as data engineer:** The simulation only produces date-partitioned JSONL event files (no loader in this repo). You build the pipeline that parses the JSONL (including corrupted records!), quarantines bad lines, loads valid events into PostgreSQL, designs your schema, joins events, and builds dashboards.
 
 ---
 
@@ -174,7 +174,7 @@ Runs the simulation as a continuous service. Events are written directly to Post
 
 **Tips:**
 - Look at the JSON files in `data/` for field names and data types
-- Parse `daily_events_log.jsonl` to understand event structures
+- Parse the date-partitioned files in `data/events/` (e.g. `YYYY-MM-DD.jsonl`) to understand event structures
 - Use JSONB for flexible payload storage, or normalize into separate columns
 - Add appropriate indexes for timestamp and foreign key columns
 
@@ -205,6 +205,7 @@ DB_SSLMODE=require
 | `simulate` | `ticks` | Number of hourly ticks |
 | `simulate` | `seed` | RNG seed for simulation |
 | `simulate` | `start_time` | ISO-8601 start time |
+| `simulate.engine` | `events_dir` | Optional; directory for date-partitioned event JSONL (default: `data/events`). Can also set `EVENTS_DIR` in `.env`. |
 | `run-service` | `tick_interval` | Seconds between ticks |
 
 ### Engine Config (Simulation Parameters)
@@ -296,7 +297,9 @@ Random major disruption placed in years 2-4:
 
 ### Event Log (JSONL)
 
-All simulation events are appended to `data/daily_events_log.jsonl`:
+All simulation events are written to **date-partitioned** JSONL files under `data/events/`: one file per simulation day, named `YYYY-MM-DD.jsonl`. The simulation rolls over to a new file when the simulated day changes. You can override the directory with config key `events_dir` or environment variable `EVENTS_DIR` (default: `data/events`).
+
+Example layout: `data/events/2026-02-02.jsonl`, `data/events/2026-02-03.jsonl`, etc. Each line is one event:
 
 ```json
 {
@@ -305,6 +308,8 @@ All simulation events are appended to `data/daily_events_log.jsonl`:
   "payload": { "order_id": "...", "customer_id": "...", "qty": 3 }
 }
 ```
+
+Corruption metadata (for verifying your pipeline's quarantine) is written to `data/events/_meta/corruption_meta_log.jsonl`.
 
 ### Event Types
 
@@ -349,9 +354,9 @@ This simulator is designed to give you real-world data engineering challenges:
 - Choose appropriate data types and indexes
 
 **Data Pipeline:**
-- Parse JSONL and handle corrupted records (~1% intentionally malformed)
+- Parse the JSONL files in `data/events/` and handle corrupted records (~1% intentionally malformed)
 - Load JSON master data into dimension tables
-- Stream events from JSONL to fact tables
+- Stream events from date-partitioned JSONL into your fact tables
 
 **Data Modeling:**
 - Join events (link `PurchaseOrderCreated` → `PurchaseOrderReceived` via `purchase_order_id`)
@@ -364,7 +369,7 @@ This simulator is designed to give you real-world data engineering challenges:
 - Create dashboards in PowerBI, Tableau, or Metabase
 
 **Error Handling:**
-- Check `corruption_meta_log.jsonl` to verify your pipeline catches all corrupted records
+- Check `data/events/_meta/corruption_meta_log.jsonl` to verify your pipeline catches all corrupted records
 - Build robust ETL that doesn't fail on bad data
 
 ---
@@ -377,12 +382,12 @@ This simulator is designed to give you real-world data engineering challenges:
 # 1. Generate master data
 python main.py generate --seed 42
 
-# 2. Generate 3 years of historical data (to JSON)
+# 2. Generate 3 years of historical data (events to date-partitioned JSONL in data/events/)
 python main.py generate-history --years 3 --seed 42
 
-# 3. (Manual) Transfer historical JSON to PostgreSQL
+# 3. (Your pipeline) Parse JSONL, quarantine bad lines, load valid events into PostgreSQL
 
-# 4. Start 24/7 service
+# 4. Start 24/7 service (events to JSONL; state/resume in PostgreSQL)
 python main.py run-service --tick-interval 5 --fresh
 ```
 

@@ -1,26 +1,21 @@
-"""Database connection and operations for PostgreSQL integration.
+"""Database connection and state persistence for the supply chain simulation.
 
-This module provides centralized database management for the supply chain simulation,
-including connection handling, event logging, and state persistence.
+This module provides connection handling and system state save/load for
+run-service resume capability. Events are written to JSONL by the simulation;
+this module does not insert events.
 
 Key Functions:
     - get_engine(): Create/return cached SQLAlchemy engine
     - get_session(): Context manager for database sessions
-    - insert_event(): Insert single event to fact_events table
-    - insert_events_batch(): Bulk insert for better performance
+    - test_connection(): Test database connectivity
     - save_system_state(): Persist simulation state for resume capability
     - load_system_state(): Load state for resuming simulation
 
 Usage:
-    from scripts.db_manager import get_session, insert_event
-    
-    # Insert an event
-    event = {"timestamp": "...", "event_type": "...", "payload": {...}}
-    insert_event(event)
-    
-    # Direct session access (table names via TABLE_* constants)
-    with get_session() as session:
-        result = session.execute(text(f"SELECT COUNT(*) FROM {TABLE_FACT_EVENTS}"))
+    from scripts.db_manager import load_system_state, save_system_state, test_connection
+    if test_connection():
+        state = load_system_state()
+    save_system_state(current_time, tick_count, "running")
 
 Note:
     Requires a .env file with database credentials. See .env.example for template.
@@ -28,13 +23,11 @@ Note:
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Generator
-
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
@@ -48,15 +41,6 @@ _engine: Engine | None = None
 # Logger for database operations
 _logger = logging.getLogger("simulation.db")
 
-# ---------------------------------------------------------------------------
-# Schema naming convention (must match your PostgreSQL tables)
-# ---------------------------------------------------------------------------
-TABLE_FACT_EVENTS = "fact_events"
-TABLE_FACT_INVENTORY_SNAPSHOTS = "fact_inventory_snapshots"
-TABLE_FACT_ORDERS = "fact_orders"
-TABLE_DIM_SUPPLIERS = "dim_suppliers"
-TABLE_DIM_PARTS = "dim_parts"
-TABLE_DIM_CUSTOMERS = "dim_customers"
 TABLE_SYSTEM_STATE = "system_state"
 
 
@@ -143,93 +127,6 @@ def test_connection() -> bool:
         return True
     except Exception:
         return False
-
-
-def insert_event(event: dict[str, Any]) -> int | None:
-    """Insert a single event into the fact_events table.
-    
-    Args:
-        event: Dictionary with keys: timestamp, event_type, payload
-        
-    Returns:
-        The event_id of the inserted row, or None on failure.
-        
-    Note:
-        Errors are logged but not raised to avoid crashing the simulation.
-        The caller should handle None returns appropriately.
-    """
-    try:
-        with get_session() as session:
-            result = session.execute(
-                text(f"""
-                    INSERT INTO {TABLE_FACT_EVENTS} (timestamp, event_type, payload)
-                    VALUES (:timestamp, :event_type, :payload)
-                    RETURNING event_id
-                """),
-                {
-                    "timestamp": event["timestamp"],
-                    "event_type": event["event_type"],
-                    "payload": json.dumps(event["payload"]),
-                }
-            )
-            row = result.fetchone()
-            return row[0] if row else None
-    except OperationalError as e:
-        _logger.error(f"Database connection error inserting event: {e}")
-        return None
-    except SQLAlchemyError as e:
-        _logger.warning(f"Failed to insert event '{event.get('event_type', 'unknown')}': {e}")
-        return None
-    except KeyError as e:
-        _logger.error(f"Missing required key in event dict: {e}")
-        return None
-
-
-def insert_events_batch(events: list[dict[str, Any]]) -> int:
-    """Bulk insert events for better performance.
-    
-    Args:
-        events: List of event dictionaries with keys: timestamp, event_type, payload
-        
-    Returns:
-        Number of successfully inserted events (0 on failure).
-        
-    Note:
-        This is an all-or-nothing operation. If any event fails,
-        the entire batch is rolled back.
-    """
-    if not events:
-        return 0
-    
-    try:
-        with get_session() as session:
-            # Prepare batch data with validation
-            batch_data = [
-                {
-                    "timestamp": e["timestamp"],
-                    "event_type": e["event_type"],
-                    "payload": json.dumps(e["payload"]),
-                }
-                for e in events
-            ]
-            
-            session.execute(
-                text(f"""
-                    INSERT INTO {TABLE_FACT_EVENTS} (timestamp, event_type, payload)
-                    VALUES (:timestamp, :event_type, :payload)
-                """),
-                batch_data
-            )
-            return len(events)
-    except OperationalError as e:
-        _logger.error(f"Database connection error in batch insert ({len(events)} events): {e}")
-        return 0
-    except SQLAlchemyError as e:
-        _logger.warning(f"Failed to batch insert {len(events)} events: {e}")
-        return 0
-    except (KeyError, TypeError) as e:
-        _logger.error(f"Invalid event data in batch: {e}")
-        return 0
 
 
 def save_system_state(
@@ -325,179 +222,4 @@ def load_system_state() -> dict[str, Any] | None:
         return None
     except SQLAlchemyError as e:
         _logger.warning(f"Failed to load system state: {e}")
-        return None
-
-
-def save_inventory_snapshot(timestamp: datetime, inventory: dict[str, dict]) -> int:
-    """Save inventory snapshot for historical tracking.
-    
-    Args:
-        timestamp: Snapshot timestamp.
-        inventory: Dictionary mapping item_id to {qty_on_hand, reorder_point, safety_stock}.
-        
-    Returns:
-        Number of rows inserted.
-    """
-    if not inventory:
-        return 0
-    
-    try:
-        with get_session() as session:
-            batch_data = [
-                {
-                    "timestamp": timestamp,
-                    "item_id": item_id,
-                    "qty_on_hand": data.get("qty_on_hand", 0),
-                    "reorder_point": data.get("reorder_point", 0),
-                    "safety_stock": data.get("safety_stock", 0),
-                }
-                for item_id, data in inventory.items()
-            ]
-            
-            session.execute(
-                text(f"""
-                    INSERT INTO {TABLE_FACT_INVENTORY_SNAPSHOTS}
-                    (timestamp, item_id, qty_on_hand, reorder_point, safety_stock)
-                    VALUES (:timestamp, :item_id, :qty_on_hand, :reorder_point, :safety_stock)
-                """),
-                batch_data
-            )
-            return len(batch_data)
-    except SQLAlchemyError:
-        return 0
-
-
-def upsert_dimension_suppliers(suppliers: list[dict]) -> int:
-    """Upsert supplier dimension data.
-    
-    Args:
-        suppliers: List of supplier dictionaries.
-        
-    Returns:
-        Number of rows affected.
-    """
-    if not suppliers:
-        return 0
-    
-    try:
-        with get_session() as session:
-            for supplier in suppliers:
-                session.execute(
-                    text(f"""
-                        INSERT INTO {TABLE_DIM_SUPPLIERS} (supplier_id, name, country, reliability_score, risk_factor, price_multiplier)
-                        VALUES (:id, :name, :country, :reliability_score, :risk_factor, :price_multiplier)
-                        ON CONFLICT (supplier_id) DO UPDATE SET
-                            name = :name,
-                            country = :country,
-                            reliability_score = :reliability_score,
-                            risk_factor = :risk_factor,
-                            price_multiplier = :price_multiplier
-                    """),
-                    supplier
-                )
-            return len(suppliers)
-    except SQLAlchemyError:
-        return 0
-
-
-def upsert_dimension_parts(parts: list[dict]) -> int:
-    """Upsert parts dimension data.
-    
-    Args:
-        parts: List of part dictionaries.
-        
-    Returns:
-        Number of rows affected.
-    """
-    if not parts:
-        return 0
-    
-    try:
-        with get_session() as session:
-            for part in parts:
-                session.execute(
-                    text(f"""
-                        INSERT INTO {TABLE_DIM_PARTS} (part_id, name, category, standard_cost, unit_of_measure)
-                        VALUES (:part_id, :name, :category, :standard_cost, :unit_of_measure)
-                        ON CONFLICT (part_id) DO UPDATE SET
-                            name = :name,
-                            category = :category,
-                            standard_cost = :standard_cost,
-                            unit_of_measure = :unit_of_measure
-                    """),
-                    part
-                )
-            return len(parts)
-    except SQLAlchemyError:
-        return 0
-
-
-def upsert_dimension_customers(customers: list[dict]) -> int:
-    """Upsert customer dimension data.
-    
-    Args:
-        customers: List of customer dictionaries.
-        
-    Returns:
-        Number of rows affected.
-    """
-    if not customers:
-        return 0
-    
-    try:
-        with get_session() as session:
-            for customer in customers:
-                penalty_clauses = customer.get("penalty_clauses")
-                session.execute(
-                    text(f"""
-                        INSERT INTO {TABLE_DIM_CUSTOMERS} (customer_id, company_name, region, contract_priority, penalty_clauses)
-                        VALUES (:customer_id, :company_name, :region, :contract_priority, :penalty_clauses)
-                        ON CONFLICT (customer_id) DO UPDATE SET
-                            company_name = :company_name,
-                            region = :region,
-                            contract_priority = :contract_priority,
-                            penalty_clauses = :penalty_clauses
-                    """),
-                    {
-                        "customer_id": customer["customer_id"],
-                        "company_name": customer["company_name"],
-                        "region": customer["region"],
-                        "contract_priority": customer["contract_priority"],
-                        "penalty_clauses": json.dumps(penalty_clauses) if penalty_clauses else None,
-                    }
-                )
-            return len(customers)
-    except SQLAlchemyError:
-        return 0
-
-
-def get_event_count() -> int:
-    """Get total number of events in the database.
-    
-    Returns:
-        Count of events or -1 on error.
-    """
-    try:
-        with get_session() as session:
-            result = session.execute(text(f"SELECT COUNT(*) FROM {TABLE_FACT_EVENTS}"))
-            row = result.fetchone()
-            return row[0] if row else 0
-    except SQLAlchemyError:
-        return -1
-
-
-def get_latest_event_timestamp() -> datetime | None:
-    """Get timestamp of the most recent event.
-    
-    Returns:
-        Datetime of latest event or None if no events exist.
-    """
-    try:
-        with get_session() as session:
-            result = session.execute(
-                text(f"SELECT MAX(timestamp) FROM {TABLE_FACT_EVENTS}")
-            )
-            row = result.fetchone()
-            return row[0] if row and row[0] else None
-    except SQLAlchemyError:
         return None
