@@ -1,5 +1,7 @@
 # Supply Chain Simulator
 
+MAJOR UPDATE INCOMING, THIS BRANCH WILL SOON BE DEPRECATED
+
 A realistic supply chain simulation for practicing data engineering skills (SQL, Pandas, Excel, PowerBI).
 
 At first, the simulator was pushing the generated JSON lines straight to the database, but I decided that it's better for the learning experience when the pipeline just generates raw JSON files, and it's the user's mission to create the database and upload data to it. This way, one can even omit the database creation step and just play with the generated data, e.g., using only Pandas.
