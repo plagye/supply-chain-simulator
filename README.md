@@ -6,7 +6,7 @@ At first, the simulator was pushing the generated JSON lines straight to the dat
 
 Keep in mind that the JSONs included in the data/ folder of this repo are there just for example/reference. I would suggest just deleting them and generating new static data using the built-in features of the simulation engine.
 
-I'm running the simulation on a Ubuntu Server VM hosted on Azure, and I store all the data in a PostgreSQL Azure server. Feel free to design your own workflow.
+I'm running the simulation on a Ubuntu Server VM hosted on Azure, and I store all the data in a PostgreSQL Azure server, which is also needed for the simulation to store its current state and to restart from the same point. Feel free to design your own workflow.
 
 ## The Business Scenario
 
@@ -420,5 +420,9 @@ python main.py run-service --tick-interval 5 --fresh
 ```bash
 python main.py all --ticks 720 --seed 42
 ```
+
+## Acknowledgements
+
+Cursor is crazy
 
 ---
