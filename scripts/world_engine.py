@@ -16,7 +16,7 @@ Key Features:
     - Production job management with BOM consumption
     - Automatic reorder point triggers
     - Black swan event support for historical data generation
-    - Events written to date-partitioned JSONL (data/events/YYYY-MM-DD.jsonl)
+    - Events: single JSONL file for historical generation (data/events/history.jsonl), date-partitioned JSONL (YYYY-MM-DD.jsonl) for simulate and run-service
 
 Usage:
     from scripts.world_engine import WorldEngine
@@ -312,7 +312,7 @@ class BlackSwanEvent:
         return self.start_date <= current_time < self.end_date
 
 
-# Templates for black swan events (used when generating 5-year history)
+# Templates for black swan events (used when generating 3-year history)
 BLACK_SWAN_TEMPLATES = [
     {
         "name": "Supply Chain Crisis",
@@ -369,6 +369,8 @@ class WorldEngine:
         config: dict[str, Any] | None = None,
         include_black_swan: bool = False,
         simulation_years: int = 1,
+        events_single_file: bool = False,
+        events_single_file_path: Path | None = None,
     ) -> None:
         self.data_dir = data_dir or DATA_DIR
         self.rng = random.Random(seed)
@@ -380,7 +382,9 @@ class WorldEngine:
         self.config = {**DEFAULT_CONFIG, **(config or {})}
         self._validate_config()
 
-        # Events directory (date-partitioned JSONL); config or env EVENTS_DIR, default data/events
+        # Events: either single file (historical) or date-partitioned (run-service / simulate)
+        self._events_single_file = events_single_file
+        self._events_single_file_path = events_single_file_path
         events_dir_raw = self.config.get("events_dir") or os.environ.get("EVENTS_DIR", "data/events")
         self.events_dir = Path(events_dir_raw) if Path(events_dir_raw).is_absolute() else BASE_DIR / events_dir_raw
         self._events_current_day: date | None = None
@@ -444,9 +448,9 @@ class WorldEngine:
         self._cost_drift: dict[str, float] = {}  # part_id -> drift multiplier (-0.2 to +0.2)
         self._last_cost_drift_day: int = -1  # Track last day we applied drift
         
-        # Black swan event (only for 5-year historical generation)
+        # Black swan event (only for 3-year historical generation)
         self._black_swan_event: BlackSwanEvent | None = None
-        if include_black_swan and simulation_years >= 5:
+        if include_black_swan and simulation_years >= 3:
             self._black_swan_event = self._generate_black_swan_event(simulation_years)
             if self._black_swan_event:
                 # Log the black swan event at startup
@@ -501,24 +505,30 @@ class WorldEngine:
         self._log_event_to_json(event)
 
     def _log_event_to_json(self, event: dict[str, Any]) -> None:
-        """Append an event to the date-partitioned JSONL file for the current simulation day."""
+        """Append an event to JSONL: single file (historical) or date-partitioned (run-service/simulate)."""
         json_line = json.dumps(event, ensure_ascii=False)
         if (self.config.get("data_corruption_enabled", False) and
             self.rng.random() < self.config.get("data_corruption_probability", 0.01)):
             json_line, corruption_type = self._corrupt_json_line(json_line, event["event_type"])
             self._log_corruption_meta(event["event_type"], corruption_type)
         try:
-            self.events_dir.mkdir(parents=True, exist_ok=True)
-            day = self.current_time.date()
-            if self._events_current_day != day:
-                if self._events_file is not None:
-                    self._events_file.close()
-                    self._events_file = None
-                self._events_current_day = day
-                path = self.events_dir / f"{day:%Y-%m-%d}.jsonl"
-                self._events_file = path.open("a", encoding="utf-8")
-            self._events_file.write(json_line + "\n")
-            self._events_file.flush()
+            if self._events_single_file and self._events_single_file_path is not None:
+                self._events_single_file_path.parent.mkdir(parents=True, exist_ok=True)
+                if self._events_file is None:
+                    self._events_file = self._events_single_file_path.open("a", encoding="utf-8")
+                self._events_file.write(json_line + "\n")
+            else:
+                self.events_dir.mkdir(parents=True, exist_ok=True)
+                day = self.current_time.date()
+                if self._events_current_day != day:
+                    if self._events_file is not None:
+                        self._events_file.flush()
+                        self._events_file.close()
+                        self._events_file = None
+                    self._events_current_day = day
+                    path = self.events_dir / f"{day:%Y-%m-%d}.jsonl"
+                    self._events_file = path.open("a", encoding="utf-8")
+                self._events_file.write(json_line + "\n")
         except IOError as e:
             import sys
             print(f"Warning: Failed to write event log: {e}", file=sys.stderr)
@@ -763,22 +773,20 @@ class WorldEngine:
         return result
 
     def _generate_black_swan_event(self, simulation_years: int) -> BlackSwanEvent | None:
-        """Generate a random black swan event for historical simulation.
+        """Generate a random black swan event for 3-year historical simulation.
         
-        Places the event randomly in years 2-4 of a 5-year simulation,
-        avoiding the first year (to establish baseline) and last year
-        (to show recovery).
+        Places the event randomly in year 2 of a 3-year run (after baseline,
+        before final year recovery).
         """
-        if simulation_years < 5:
+        if simulation_years < 3:
             return None
         
         # Pick a random template
         template = self.rng.choice(BLACK_SWAN_TEMPLATES)
         
-        # Calculate the event start date (randomly in years 2-4)
-        # Year 1 starts at self.current_time, so year 2 starts 365 days later
+        # Event start date: randomly in year 2 of 3-year simulation
         min_offset_days = 365       # Start of year 2
-        max_offset_days = 365 * 4   # End of year 4
+        max_offset_days = 365 * 2   # End of year 2
         
         # Random day offset
         offset_days = self.rng.randint(min_offset_days, max_offset_days)
@@ -1376,9 +1384,11 @@ class WorldEngine:
         order_id: str,
         source: str,
     ) -> None:
-        """Emit MaterialRequirementCreated for each BOM component (demand explosion)."""
+        """Emit one MaterialRequirementsCreated event per order with aggregated requirements (BOM explosion)."""
         lead_days = self.config.get("requirements_lead_time_days", 30)
         required_by_date = self.current_time + timedelta(days=lead_days)
+        required_by_iso = required_by_date.date().isoformat()
+        requirements: list[dict[str, Any]] = []
         for comp in self._bom_components_for_product(product_id):
             part_id = comp.get("component_id")
             qty_per = comp.get("qty", 0)
@@ -1387,18 +1397,23 @@ class WorldEngine:
             required_qty = order_qty * qty_per
             if required_qty <= 0:
                 continue
-            self._log_event(
-                "MaterialRequirementCreated",
-                {
-                    "requirement_id": str(uuid.uuid4()),
-                    "product_id": product_id,
-                    "part_id": part_id,
-                    "required_qty": required_qty,
-                    "required_by_date": required_by_date.date().isoformat(),
-                    "source": source,
-                    "order_id": order_id,
-                },
-            )
+            requirements.append({
+                "part_id": part_id,
+                "required_qty": required_qty,
+                "required_by_date": required_by_iso,
+            })
+        if not requirements:
+            return
+        self._log_event(
+            "MaterialRequirementsCreated",
+            {
+                "order_id": order_id,
+                "product_id": product_id,
+                "source": source,
+                "required_by_date": required_by_iso,
+                "requirements": requirements,
+            },
+        )
 
     def _allocated_job_for_fulfillment(self, product_id: str, qty: int) -> str | None:
         """Pop up to qty from finished-good source queue; return job_id if any was allocated."""
@@ -2006,6 +2021,7 @@ class WorldEngine:
         """Persist dynamic state to disk on exit. Close events file handle if open."""
         if self._events_file is not None:
             try:
+                self._events_file.flush()
                 self._events_file.close()
             except IOError:
                 pass

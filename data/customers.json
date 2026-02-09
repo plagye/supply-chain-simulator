@@ -1,6 +1,6 @@
 [
   {
-    "customer_id": "bb0266a9-3268-45a1-ab94-0d06c1a59cad",
+    "customer_id": "89300566-2261-44b9-b88f-6f8cbab38f21",
     "company_name": "National Aeronautics & Defense Works",
     "region": "NA",
     "country": "USA",
@@ -29,7 +29,7 @@
     }
   },
   {
-    "customer_id": "090c06ab-2536-41b4-898a-6cc446fa08fb",
+    "customer_id": "e40908a2-c295-49fd-b6fc-54e3c821c6c0",
     "company_name": "Royal Naval Systems Authority",
     "region": "NA",
     "country": "USA",
@@ -58,7 +58,7 @@
     }
   },
   {
-    "customer_id": "ce4b8dac-5742-4f1a-b6e7-9cd21534082c",
+    "customer_id": "6a31f0e8-f1bd-4a46-bc97-9989d32e81c5",
     "company_name": "Summit Infrastructure",
     "region": "NA",
     "country": "USA",
@@ -87,7 +87,7 @@
     }
   },
   {
-    "customer_id": "22863ec8-0b5c-4d8d-9276-d4496eb1e741",
+    "customer_id": "07f59b9d-0a88-4d69-946a-4cfebe7b3781",
     "company_name": "Federal Ordnance Manufacturing Agency",
     "region": "NA",
     "country": "USA",
@@ -116,7 +116,7 @@
     }
   },
   {
-    "customer_id": "f6d896e4-ac65-4c81-81b3-fd99d32fe346",
+    "customer_id": "7daa0d2c-ede1-4e8e-8f19-abda5ba562e1",
     "company_name": "Atlas Logistics Manufacturing",
     "region": "EMEA",
     "country": "France",
@@ -145,7 +145,7 @@
     }
   },
   {
-    "customer_id": "3325a01a-0967-4d6c-9a35-a4f3bc1904fb",
+    "customer_id": "cd403fc2-4e98-4996-8daf-5cc30b1b554e",
     "company_name": "Atlas Robotics Holdings",
     "region": "NA",
     "country": "USA",
@@ -159,7 +159,7 @@
     "contract_priority": "Tier 2"
   },
   {
-    "customer_id": "db7c02a6-f503-47d5-8daa-fab91317ed6c",
+    "customer_id": "82f066b5-b140-4ce4-8a01-b5e0f4d64126",
     "company_name": "Orion Energy",
     "region": "EMEA",
     "country": "Spain",
@@ -173,21 +173,21 @@
     "contract_priority": "Tier 2"
   },
   {
-    "customer_id": "0ed891c0-df03-4a17-87f6-05b0cca6335d",
+    "customer_id": "d41ec89f-bc5b-4072-8628-be3bb5c2353a",
     "company_name": "Hansa Precision Engineering",
     "region": "EMEA",
     "country": "Italy",
     "street": "Strada Travaglio, 21 Piano 4",
-    "city": "Maglione",
+    "city": "Roccagloriosa",
     "state": "",
     "postal_code": "94018",
-    "shipping_address": "Strada Travaglio, 21 Piano 4, Maglione, 94018, Italy",
+    "shipping_address": "Strada Travaglio, 21 Piano 4, Roccagloriosa, 94018, Italy",
     "destination_facility_id": "dist_emea_01",
     "delivery_location_code": "NLD_RTM",
     "contract_priority": "Tier 2"
   },
   {
-    "customer_id": "59678a40-0fb9-4230-9f65-dee23988f850",
+    "customer_id": "b3c89964-0c28-4995-99fb-37d847e9b885",
     "company_name": "Rhein Infrastructure GmbH",
     "region": "NA",
     "country": "USA",
@@ -201,7 +201,7 @@
     "contract_priority": "Tier 2"
   },
   {
-    "customer_id": "852e451e-1e78-45ec-93d8-03a2ce72644f",
+    "customer_id": "9ad5e74d-8554-4ce9-b092-6814177fd8ea",
     "company_name": "Vertex Aerospace",
     "region": "NA",
     "country": "USA",
@@ -215,7 +215,7 @@
     "contract_priority": "Tier 2"
   },
   {
-    "customer_id": "2d45a315-0f84-4987-86eb-ac827860a18c",
+    "customer_id": "bd8acaf6-e3d1-4692-9dea-7995df748af2",
     "company_name": "Everbright-Energy Industries",
     "region": "NA",
     "country": "Canada",
@@ -229,7 +229,7 @@
     "contract_priority": "Tier 2"
   },
   {
-    "customer_id": "44d4fd14-841b-4d6f-ad69-7dbd52ccf581",
+    "customer_id": "e56b185b-d5ef-4d7c-8085-e8faeff878e1",
     "company_name": "Summit Automation Systems",
     "region": "NA",
     "country": "Canada",
@@ -243,7 +243,7 @@
     "contract_priority": "Tier 2"
   },
   {
-    "customer_id": "ddf5bca1-9b18-46a7-a27a-1537ab304e04",
+    "customer_id": "39e2a130-39ff-46e8-b0f3-37251cc04273",
     "company_name": "Keystone-Maritime Systems Ltd.",
     "region": "EMEA",
     "country": "United Kingdom",
@@ -257,7 +257,7 @@
     "contract_priority": "Tier 2"
   },
   {
-    "customer_id": "b6908bf1-db85-4007-a523-d5826207b9aa",
+    "customer_id": "86c1c560-5eed-4b7e-b72c-e370a35021fb",
     "company_name": "Atlas Aerospace Holdings Ltd",
     "region": "APAC",
     "country": "Australia",
@@ -271,7 +271,7 @@
     "contract_priority": "Tier 2"
   },
   {
-    "customer_id": "1012ea46-90ba-477d-9992-2aa3c05750b1",
+    "customer_id": "18819e89-d9c5-4e8f-8ee4-9a1700e6f83f",
     "company_name": "Atlas-Rail Systems Ltd.",
     "region": "NA",
     "country": "USA",

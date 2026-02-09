@@ -6,8 +6,8 @@
     "standard_cost": 3.38,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "cb9690fe-8fc0-49ab-8ec1-16d1757ad645",
-      "e7e50e5c-f01c-4e25-a8ef-84dcead19db3"
+      "0c7d59c7-4481-45cd-8947-e80c7b3c5cff",
+      "11377984-a1aa-4585-9904-5f9468666d49"
     ]
   },
   {
@@ -17,9 +17,9 @@
     "standard_cost": 3.34,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "8b59b6af-8768-4e00-813a-92acaafd7e1f",
-      "cb9690fe-8fc0-49ab-8ec1-16d1757ad645",
-      "fa89dcfe-20c4-4203-b1d3-6904c3d93241"
+      "04b9bf52-9f54-4686-81b0-2a5bd30c9f56",
+      "11377984-a1aa-4585-9904-5f9468666d49",
+      "eb8bf817-ea5c-4f2b-8cb0-b9987fe7ab12"
     ]
   },
   {
@@ -29,12 +29,12 @@
     "standard_cost": 3.48,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "19e5a51a-5622-45d6-8d57-8edd8e85836c",
-      "6e970f58-b46c-4144-9439-6319b0f843e4",
-      "a6690f0c-a779-4082-9532-2674f9abe216",
-      "be1544a8-5d7d-4f33-a03c-0c096bea3284",
-      "e7e50e5c-f01c-4e25-a8ef-84dcead19db3",
-      "ffe056d9-6a2b-4c6e-b89f-aadf7d7691c9"
+      "0c7d59c7-4481-45cd-8947-e80c7b3c5cff",
+      "18ec6d81-8939-4500-8640-7b91b7d1a2b9",
+      "40393509-c40a-47b4-b7e2-073712a2fdde",
+      "5e2fc643-7503-40fd-9f3c-e99ff8ddeb45",
+      "f2e01ff1-f3e3-42d8-97bb-527f9be92729",
+      "f75055e9-5e31-4795-8b75-7c7b52eaa9e2"
     ]
   },
   {
@@ -44,12 +44,12 @@
     "standard_cost": 1.66,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "024b9eb7-e3d6-4cc8-9992-eed95b2698d0",
-      "714fc316-da45-48dc-a620-158bc085fc00",
-      "b45318b2-5a2a-44ca-9916-8c09d57e0540",
-      "b7ad1304-197e-49e3-911f-a27d893fc285",
-      "d2b7a5fe-31f9-4131-8c28-63d9e7077785",
-      "e7e50e5c-f01c-4e25-a8ef-84dcead19db3"
+      "0c7d59c7-4481-45cd-8947-e80c7b3c5cff",
+      "84920a05-62ee-4528-a1a6-85df1f62e286",
+      "cee40f83-f16f-44f6-907a-17a11e161dfb",
+      "ec124747-ba5a-4a00-8c74-8b3ce6642e34",
+      "f610ec86-8e7f-4f8c-8a60-f6ff498b6f3d",
+      "fb7ce668-6d54-487b-a033-6388049c0dec"
     ]
   },
   {
@@ -59,11 +59,11 @@
     "standard_cost": 7.15,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "0f9aa0e9-5876-4ff4-82d2-0c6da592a119",
-      "6e970f58-b46c-4144-9439-6319b0f843e4",
-      "82dc0849-9fdb-4fb1-a16c-5cdcc10a962d",
-      "89fb482d-5b77-45c4-99af-b73a7aac7046",
-      "cebdf4de-ae9f-42f8-bc9d-a8b52f6719dd"
+      "0a497567-adbf-440d-a04d-a77664c5890a",
+      "5e2fc643-7503-40fd-9f3c-e99ff8ddeb45",
+      "7f603748-2b62-4e92-b6db-5768952fd7ff",
+      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
+      "f6aaa254-dcc3-4927-9ba3-7c870cf00f21"
     ]
   },
   {
@@ -73,9 +73,9 @@
     "standard_cost": 0.16,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "5e5a64a1-736e-4841-8de8-95ab9bd9e2cb",
-      "b7ad1304-197e-49e3-911f-a27d893fc285",
-      "be1544a8-5d7d-4f33-a03c-0c096bea3284"
+      "40393509-c40a-47b4-b7e2-073712a2fdde",
+      "cee40f83-f16f-44f6-907a-17a11e161dfb",
+      "ef1ec63c-eca0-4c12-8e53-1a35012e3582"
     ]
   },
   {
@@ -85,9 +85,9 @@
     "standard_cost": 0.28,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "5e5a64a1-736e-4841-8de8-95ab9bd9e2cb",
-      "6ceffcc7-3cef-454f-956f-5fab8ed388f7",
-      "fa89dcfe-20c4-4203-b1d3-6904c3d93241"
+      "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
+      "eb8bf817-ea5c-4f2b-8cb0-b9987fe7ab12",
+      "ef1ec63c-eca0-4c12-8e53-1a35012e3582"
     ]
   },
   {
@@ -97,8 +97,8 @@
     "standard_cost": 0.88,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "5832c340-892a-4e30-add8-016581d97192",
-      "d868765b-870d-4003-b6b7-83ef406104f3"
+      "5a2701cb-ea25-456b-82e8-0194e285c4d8",
+      "beded468-ac8c-4e81-b044-c861b94334cd"
     ]
   },
   {
@@ -108,10 +108,10 @@
     "standard_cost": 3.13,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "82dc0849-9fdb-4fb1-a16c-5cdcc10a962d",
-      "89fb482d-5b77-45c4-99af-b73a7aac7046",
-      "cb9690fe-8fc0-49ab-8ec1-16d1757ad645",
-      "ffe056d9-6a2b-4c6e-b89f-aadf7d7691c9"
+      "0a497567-adbf-440d-a04d-a77664c5890a",
+      "11377984-a1aa-4585-9904-5f9468666d49",
+      "f2e01ff1-f3e3-42d8-97bb-527f9be92729",
+      "f6aaa254-dcc3-4927-9ba3-7c870cf00f21"
     ]
   },
   {
@@ -121,11 +121,11 @@
     "standard_cost": 6.33,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "19e5a51a-5622-45d6-8d57-8edd8e85836c",
-      "b45318b2-5a2a-44ca-9916-8c09d57e0540",
-      "b96f8234-8477-4548-889b-bfd73dfa639e",
-      "d2b7a5fe-31f9-4131-8c28-63d9e7077785",
-      "e9a8963c-8a3c-4874-87c2-d5604db245c1"
+      "84920a05-62ee-4528-a1a6-85df1f62e286",
+      "ec124747-ba5a-4a00-8c74-8b3ce6642e34",
+      "ec6c04d6-ecb4-43d7-8905-e3f4463f1273",
+      "f75055e9-5e31-4795-8b75-7c7b52eaa9e2",
+      "fc42fe54-0c9d-4d17-a56d-a8c042867ea6"
     ]
   },
   {
@@ -135,10 +135,10 @@
     "standard_cost": 4.07,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "024b9eb7-e3d6-4cc8-9992-eed95b2698d0",
-      "19e5a51a-5622-45d6-8d57-8edd8e85836c",
-      "6e970f58-b46c-4144-9439-6319b0f843e4",
-      "b7ad1304-197e-49e3-911f-a27d893fc285"
+      "5e2fc643-7503-40fd-9f3c-e99ff8ddeb45",
+      "cee40f83-f16f-44f6-907a-17a11e161dfb",
+      "f75055e9-5e31-4795-8b75-7c7b52eaa9e2",
+      "fb7ce668-6d54-487b-a033-6388049c0dec"
     ]
   },
   {
@@ -148,9 +148,9 @@
     "standard_cost": 5.28,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "19e5a51a-5622-45d6-8d57-8edd8e85836c",
-      "6ceffcc7-3cef-454f-956f-5fab8ed388f7",
-      "b96f8234-8477-4548-889b-bfd73dfa639e"
+      "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
+      "ec6c04d6-ecb4-43d7-8905-e3f4463f1273",
+      "f75055e9-5e31-4795-8b75-7c7b52eaa9e2"
     ]
   },
   {
@@ -160,8 +160,8 @@
     "standard_cost": 0.08,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "0f9aa0e9-5876-4ff4-82d2-0c6da592a119",
-      "a4c4068c-295a-4bab-9686-44e51fc41040"
+      "7f603748-2b62-4e92-b6db-5768952fd7ff",
+      "cbfa957a-9561-4870-b6ae-1a26fa3d2df9"
     ]
   },
   {
@@ -171,10 +171,10 @@
     "standard_cost": 0.03,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "024b9eb7-e3d6-4cc8-9992-eed95b2698d0",
-      "07a40632-36f1-4450-8e6f-655eee93001c",
-      "5832c340-892a-4e30-add8-016581d97192",
-      "8d40209d-bd9d-4190-8a1a-c778aaf9f4cb"
+      "5a2701cb-ea25-456b-82e8-0194e285c4d8",
+      "70991141-f9e2-44d7-b91d-8876abd7069e",
+      "f170e41e-4981-456b-974e-2fa0c8bcb6fb",
+      "fb7ce668-6d54-487b-a033-6388049c0dec"
     ]
   },
   {
@@ -184,8 +184,8 @@
     "standard_cost": 0.53,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "714fc316-da45-48dc-a620-158bc085fc00",
-      "b45318b2-5a2a-44ca-9916-8c09d57e0540"
+      "84920a05-62ee-4528-a1a6-85df1f62e286",
+      "f610ec86-8e7f-4f8c-8a60-f6ff498b6f3d"
     ]
   },
   {
@@ -195,9 +195,9 @@
     "standard_cost": 3.39,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "89fb482d-5b77-45c4-99af-b73a7aac7046",
-      "8d40209d-bd9d-4190-8a1a-c778aaf9f4cb",
-      "a4c4068c-295a-4bab-9686-44e51fc41040"
+      "0a497567-adbf-440d-a04d-a77664c5890a",
+      "cbfa957a-9561-4870-b6ae-1a26fa3d2df9",
+      "f170e41e-4981-456b-974e-2fa0c8bcb6fb"
     ]
   },
   {
@@ -207,12 +207,12 @@
     "standard_cost": 0.07,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "07a40632-36f1-4450-8e6f-655eee93001c",
-      "5e5a64a1-736e-4841-8de8-95ab9bd9e2cb",
-      "6ceffcc7-3cef-454f-956f-5fab8ed388f7",
-      "82dc0849-9fdb-4fb1-a16c-5cdcc10a962d",
-      "cebdf4de-ae9f-42f8-bc9d-a8b52f6719dd",
-      "e9a8963c-8a3c-4874-87c2-d5604db245c1"
+      "70991141-f9e2-44d7-b91d-8876abd7069e",
+      "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
+      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
+      "ef1ec63c-eca0-4c12-8e53-1a35012e3582",
+      "f6aaa254-dcc3-4927-9ba3-7c870cf00f21",
+      "fc42fe54-0c9d-4d17-a56d-a8c042867ea6"
     ]
   },
   {
@@ -222,8 +222,8 @@
     "standard_cost": 0.05,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "5e5a64a1-736e-4841-8de8-95ab9bd9e2cb",
-      "82dc0849-9fdb-4fb1-a16c-5cdcc10a962d"
+      "ef1ec63c-eca0-4c12-8e53-1a35012e3582",
+      "f6aaa254-dcc3-4927-9ba3-7c870cf00f21"
     ]
   },
   {
@@ -233,8 +233,8 @@
     "standard_cost": 0.67,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "024b9eb7-e3d6-4cc8-9992-eed95b2698d0",
-      "a6690f0c-a779-4082-9532-2674f9abe216"
+      "18ec6d81-8939-4500-8640-7b91b7d1a2b9",
+      "fb7ce668-6d54-487b-a033-6388049c0dec"
     ]
   },
   {
@@ -244,10 +244,10 @@
     "standard_cost": 0.36,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "024b9eb7-e3d6-4cc8-9992-eed95b2698d0",
-      "a0d774a9-34e7-4cb9-897e-313b1dcdb1b2",
-      "a4c4068c-295a-4bab-9686-44e51fc41040",
-      "b45318b2-5a2a-44ca-9916-8c09d57e0540"
+      "84920a05-62ee-4528-a1a6-85df1f62e286",
+      "a5fec7eb-c90b-4c98-842a-e273a824de96",
+      "cbfa957a-9561-4870-b6ae-1a26fa3d2df9",
+      "fb7ce668-6d54-487b-a033-6388049c0dec"
     ]
   },
   {
@@ -257,11 +257,11 @@
     "standard_cost": 43.33,
     "unit_of_measure": "m",
     "valid_supplier_ids": [
-      "0f9aa0e9-5876-4ff4-82d2-0c6da592a119",
-      "8b59b6af-8768-4e00-813a-92acaafd7e1f",
-      "cb9690fe-8fc0-49ab-8ec1-16d1757ad645",
-      "cebdf4de-ae9f-42f8-bc9d-a8b52f6719dd",
-      "d2b7a5fe-31f9-4131-8c28-63d9e7077785"
+      "04b9bf52-9f54-4686-81b0-2a5bd30c9f56",
+      "11377984-a1aa-4585-9904-5f9468666d49",
+      "7f603748-2b62-4e92-b6db-5768952fd7ff",
+      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
+      "ec124747-ba5a-4a00-8c74-8b3ce6642e34"
     ]
   },
   {
@@ -271,12 +271,12 @@
     "standard_cost": 17.96,
     "unit_of_measure": "m",
     "valid_supplier_ids": [
-      "5832c340-892a-4e30-add8-016581d97192",
-      "6e970f58-b46c-4144-9439-6319b0f843e4",
-      "a4c4068c-295a-4bab-9686-44e51fc41040",
-      "be1544a8-5d7d-4f33-a03c-0c096bea3284",
-      "cebdf4de-ae9f-42f8-bc9d-a8b52f6719dd",
-      "e94449ba-8c34-4db3-9527-ea08b8992005"
+      "40393509-c40a-47b4-b7e2-073712a2fdde",
+      "5a2701cb-ea25-456b-82e8-0194e285c4d8",
+      "5e2fc643-7503-40fd-9f3c-e99ff8ddeb45",
+      "c9a681f8-403d-42b8-958c-60f507e5cd59",
+      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
+      "cbfa957a-9561-4870-b6ae-1a26fa3d2df9"
     ]
   },
   {
@@ -286,9 +286,9 @@
     "standard_cost": 1.22,
     "unit_of_measure": "m",
     "valid_supplier_ids": [
-      "19e5a51a-5622-45d6-8d57-8edd8e85836c",
-      "5a75fa93-0089-418a-b57b-7989c30facc4",
-      "a0d774a9-34e7-4cb9-897e-313b1dcdb1b2"
+      "7864feb7-c35e-4178-8a65-b6bf094d5963",
+      "a5fec7eb-c90b-4c98-842a-e273a824de96",
+      "f75055e9-5e31-4795-8b75-7c7b52eaa9e2"
     ]
   },
   {
@@ -298,8 +298,8 @@
     "standard_cost": 4.76,
     "unit_of_measure": "m",
     "valid_supplier_ids": [
-      "8b59b6af-8768-4e00-813a-92acaafd7e1f",
-      "b45318b2-5a2a-44ca-9916-8c09d57e0540"
+      "04b9bf52-9f54-4686-81b0-2a5bd30c9f56",
+      "84920a05-62ee-4528-a1a6-85df1f62e286"
     ]
   },
   {
@@ -309,11 +309,11 @@
     "standard_cost": 1.7,
     "unit_of_measure": "kg",
     "valid_supplier_ids": [
-      "19e5a51a-5622-45d6-8d57-8edd8e85836c",
-      "5a75fa93-0089-418a-b57b-7989c30facc4",
-      "714fc316-da45-48dc-a620-158bc085fc00",
-      "89fb482d-5b77-45c4-99af-b73a7aac7046",
-      "a4c4068c-295a-4bab-9686-44e51fc41040"
+      "0a497567-adbf-440d-a04d-a77664c5890a",
+      "7864feb7-c35e-4178-8a65-b6bf094d5963",
+      "cbfa957a-9561-4870-b6ae-1a26fa3d2df9",
+      "f610ec86-8e7f-4f8c-8a60-f6ff498b6f3d",
+      "f75055e9-5e31-4795-8b75-7c7b52eaa9e2"
     ]
   },
   {
@@ -323,12 +323,12 @@
     "standard_cost": 4.45,
     "unit_of_measure": "kg",
     "valid_supplier_ids": [
-      "07a40632-36f1-4450-8e6f-655eee93001c",
-      "a6690f0c-a779-4082-9532-2674f9abe216",
-      "cb9690fe-8fc0-49ab-8ec1-16d1757ad645",
-      "d868765b-870d-4003-b6b7-83ef406104f3",
-      "e7e50e5c-f01c-4e25-a8ef-84dcead19db3",
-      "fa89dcfe-20c4-4203-b1d3-6904c3d93241"
+      "0c7d59c7-4481-45cd-8947-e80c7b3c5cff",
+      "11377984-a1aa-4585-9904-5f9468666d49",
+      "18ec6d81-8939-4500-8640-7b91b7d1a2b9",
+      "70991141-f9e2-44d7-b91d-8876abd7069e",
+      "beded468-ac8c-4e81-b044-c861b94334cd",
+      "eb8bf817-ea5c-4f2b-8cb0-b9987fe7ab12"
     ]
   },
   {
@@ -338,10 +338,10 @@
     "standard_cost": 9.52,
     "unit_of_measure": "kg",
     "valid_supplier_ids": [
-      "5e5a64a1-736e-4841-8de8-95ab9bd9e2cb",
-      "6ceffcc7-3cef-454f-956f-5fab8ed388f7",
-      "b45318b2-5a2a-44ca-9916-8c09d57e0540",
-      "fa89dcfe-20c4-4203-b1d3-6904c3d93241"
+      "84920a05-62ee-4528-a1a6-85df1f62e286",
+      "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
+      "eb8bf817-ea5c-4f2b-8cb0-b9987fe7ab12",
+      "ef1ec63c-eca0-4c12-8e53-1a35012e3582"
     ]
   },
   {
@@ -351,9 +351,9 @@
     "standard_cost": 12.76,
     "unit_of_measure": "kg",
     "valid_supplier_ids": [
-      "89fb482d-5b77-45c4-99af-b73a7aac7046",
-      "cb9690fe-8fc0-49ab-8ec1-16d1757ad645",
-      "e7e50e5c-f01c-4e25-a8ef-84dcead19db3"
+      "0a497567-adbf-440d-a04d-a77664c5890a",
+      "0c7d59c7-4481-45cd-8947-e80c7b3c5cff",
+      "11377984-a1aa-4585-9904-5f9468666d49"
     ]
   },
   {
@@ -363,10 +363,10 @@
     "standard_cost": 3.3,
     "unit_of_measure": "m",
     "valid_supplier_ids": [
-      "5a75fa93-0089-418a-b57b-7989c30facc4",
-      "6ceffcc7-3cef-454f-956f-5fab8ed388f7",
-      "8d40209d-bd9d-4190-8a1a-c778aaf9f4cb",
-      "a6690f0c-a779-4082-9532-2674f9abe216"
+      "18ec6d81-8939-4500-8640-7b91b7d1a2b9",
+      "7864feb7-c35e-4178-8a65-b6bf094d5963",
+      "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
+      "f170e41e-4981-456b-974e-2fa0c8bcb6fb"
     ]
   },
   {
@@ -376,10 +376,10 @@
     "standard_cost": 1.16,
     "unit_of_measure": "kg",
     "valid_supplier_ids": [
-      "5a75fa93-0089-418a-b57b-7989c30facc4",
-      "714fc316-da45-48dc-a620-158bc085fc00",
-      "b45318b2-5a2a-44ca-9916-8c09d57e0540",
-      "e9a8963c-8a3c-4874-87c2-d5604db245c1"
+      "7864feb7-c35e-4178-8a65-b6bf094d5963",
+      "84920a05-62ee-4528-a1a6-85df1f62e286",
+      "f610ec86-8e7f-4f8c-8a60-f6ff498b6f3d",
+      "fc42fe54-0c9d-4d17-a56d-a8c042867ea6"
     ]
   },
   {
@@ -389,10 +389,10 @@
     "standard_cost": 3.95,
     "unit_of_measure": "kg",
     "valid_supplier_ids": [
-      "6ceffcc7-3cef-454f-956f-5fab8ed388f7",
-      "8d40209d-bd9d-4190-8a1a-c778aaf9f4cb",
-      "a6690f0c-a779-4082-9532-2674f9abe216",
-      "d2b7a5fe-31f9-4131-8c28-63d9e7077785"
+      "18ec6d81-8939-4500-8640-7b91b7d1a2b9",
+      "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
+      "ec124747-ba5a-4a00-8c74-8b3ce6642e34",
+      "f170e41e-4981-456b-974e-2fa0c8bcb6fb"
     ]
   },
   {
@@ -402,8 +402,8 @@
     "standard_cost": 76.76,
     "unit_of_measure": "kg",
     "valid_supplier_ids": [
-      "5e5a64a1-736e-4841-8de8-95ab9bd9e2cb",
-      "714fc316-da45-48dc-a620-158bc085fc00"
+      "ef1ec63c-eca0-4c12-8e53-1a35012e3582",
+      "f610ec86-8e7f-4f8c-8a60-f6ff498b6f3d"
     ]
   },
   {
@@ -413,8 +413,8 @@
     "standard_cost": 31.85,
     "unit_of_measure": "kg",
     "valid_supplier_ids": [
-      "5832c340-892a-4e30-add8-016581d97192",
-      "a6690f0c-a779-4082-9532-2674f9abe216"
+      "18ec6d81-8939-4500-8640-7b91b7d1a2b9",
+      "5a2701cb-ea25-456b-82e8-0194e285c4d8"
     ]
   },
   {
@@ -424,10 +424,10 @@
     "standard_cost": 11.52,
     "unit_of_measure": "kg",
     "valid_supplier_ids": [
-      "6e970f58-b46c-4144-9439-6319b0f843e4",
-      "cebdf4de-ae9f-42f8-bc9d-a8b52f6719dd",
-      "e94449ba-8c34-4db3-9527-ea08b8992005",
-      "ffe056d9-6a2b-4c6e-b89f-aadf7d7691c9"
+      "5e2fc643-7503-40fd-9f3c-e99ff8ddeb45",
+      "c9a681f8-403d-42b8-958c-60f507e5cd59",
+      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
+      "f2e01ff1-f3e3-42d8-97bb-527f9be92729"
     ]
   },
   {
@@ -437,8 +437,8 @@
     "standard_cost": 5.58,
     "unit_of_measure": "m",
     "valid_supplier_ids": [
-      "a0d774a9-34e7-4cb9-897e-313b1dcdb1b2",
-      "cb9690fe-8fc0-49ab-8ec1-16d1757ad645"
+      "11377984-a1aa-4585-9904-5f9468666d49",
+      "a5fec7eb-c90b-4c98-842a-e273a824de96"
     ]
   },
   {
@@ -448,12 +448,12 @@
     "standard_cost": 0.1,
     "unit_of_measure": "m",
     "valid_supplier_ids": [
-      "07a40632-36f1-4450-8e6f-655eee93001c",
-      "6ceffcc7-3cef-454f-956f-5fab8ed388f7",
-      "8b59b6af-8768-4e00-813a-92acaafd7e1f",
-      "a0d774a9-34e7-4cb9-897e-313b1dcdb1b2",
-      "d2b7a5fe-31f9-4131-8c28-63d9e7077785",
-      "e94449ba-8c34-4db3-9527-ea08b8992005"
+      "04b9bf52-9f54-4686-81b0-2a5bd30c9f56",
+      "70991141-f9e2-44d7-b91d-8876abd7069e",
+      "a5fec7eb-c90b-4c98-842a-e273a824de96",
+      "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
+      "c9a681f8-403d-42b8-958c-60f507e5cd59",
+      "ec124747-ba5a-4a00-8c74-8b3ce6642e34"
     ]
   },
   {
@@ -463,12 +463,12 @@
     "standard_cost": 3.5,
     "unit_of_measure": "m",
     "valid_supplier_ids": [
-      "024b9eb7-e3d6-4cc8-9992-eed95b2698d0",
-      "6ceffcc7-3cef-454f-956f-5fab8ed388f7",
-      "714fc316-da45-48dc-a620-158bc085fc00",
-      "be1544a8-5d7d-4f33-a03c-0c096bea3284",
-      "d2b7a5fe-31f9-4131-8c28-63d9e7077785",
-      "d868765b-870d-4003-b6b7-83ef406104f3"
+      "40393509-c40a-47b4-b7e2-073712a2fdde",
+      "beded468-ac8c-4e81-b044-c861b94334cd",
+      "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
+      "ec124747-ba5a-4a00-8c74-8b3ce6642e34",
+      "f610ec86-8e7f-4f8c-8a60-f6ff498b6f3d",
+      "fb7ce668-6d54-487b-a033-6388049c0dec"
     ]
   },
   {
@@ -478,9 +478,9 @@
     "standard_cost": 139.46,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "a4c4068c-295a-4bab-9686-44e51fc41040",
-      "b7ad1304-197e-49e3-911f-a27d893fc285",
-      "b96f8234-8477-4548-889b-bfd73dfa639e"
+      "cbfa957a-9561-4870-b6ae-1a26fa3d2df9",
+      "cee40f83-f16f-44f6-907a-17a11e161dfb",
+      "ec6c04d6-ecb4-43d7-8905-e3f4463f1273"
     ]
   },
   {
@@ -490,10 +490,10 @@
     "standard_cost": 70.95,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "5a75fa93-0089-418a-b57b-7989c30facc4",
-      "89fb482d-5b77-45c4-99af-b73a7aac7046",
-      "e94449ba-8c34-4db3-9527-ea08b8992005",
-      "fa89dcfe-20c4-4203-b1d3-6904c3d93241"
+      "0a497567-adbf-440d-a04d-a77664c5890a",
+      "7864feb7-c35e-4178-8a65-b6bf094d5963",
+      "c9a681f8-403d-42b8-958c-60f507e5cd59",
+      "eb8bf817-ea5c-4f2b-8cb0-b9987fe7ab12"
     ]
   },
   {
@@ -503,8 +503,8 @@
     "standard_cost": 8.09,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "5e5a64a1-736e-4841-8de8-95ab9bd9e2cb",
-      "e7e50e5c-f01c-4e25-a8ef-84dcead19db3"
+      "0c7d59c7-4481-45cd-8947-e80c7b3c5cff",
+      "ef1ec63c-eca0-4c12-8e53-1a35012e3582"
     ]
   },
   {
@@ -514,9 +514,9 @@
     "standard_cost": 7.7,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "6e970f58-b46c-4144-9439-6319b0f843e4",
-      "cebdf4de-ae9f-42f8-bc9d-a8b52f6719dd",
-      "e7e50e5c-f01c-4e25-a8ef-84dcead19db3"
+      "0c7d59c7-4481-45cd-8947-e80c7b3c5cff",
+      "5e2fc643-7503-40fd-9f3c-e99ff8ddeb45",
+      "cb96a579-bdd1-4460-a950-fa98ad9074e8"
     ]
   },
   {
@@ -526,8 +526,8 @@
     "standard_cost": 5.55,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "19e5a51a-5622-45d6-8d57-8edd8e85836c",
-      "cebdf4de-ae9f-42f8-bc9d-a8b52f6719dd"
+      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
+      "f75055e9-5e31-4795-8b75-7c7b52eaa9e2"
     ]
   },
   {
@@ -537,10 +537,10 @@
     "standard_cost": 2.94,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "0f9aa0e9-5876-4ff4-82d2-0c6da592a119",
-      "19e5a51a-5622-45d6-8d57-8edd8e85836c",
-      "5a75fa93-0089-418a-b57b-7989c30facc4",
-      "cebdf4de-ae9f-42f8-bc9d-a8b52f6719dd"
+      "7864feb7-c35e-4178-8a65-b6bf094d5963",
+      "7f603748-2b62-4e92-b6db-5768952fd7ff",
+      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
+      "f75055e9-5e31-4795-8b75-7c7b52eaa9e2"
     ]
   },
   {
@@ -550,9 +550,9 @@
     "standard_cost": 3.31,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "8b59b6af-8768-4e00-813a-92acaafd7e1f",
-      "cb9690fe-8fc0-49ab-8ec1-16d1757ad645",
-      "d2b7a5fe-31f9-4131-8c28-63d9e7077785"
+      "04b9bf52-9f54-4686-81b0-2a5bd30c9f56",
+      "11377984-a1aa-4585-9904-5f9468666d49",
+      "ec124747-ba5a-4a00-8c74-8b3ce6642e34"
     ]
   },
   {
@@ -562,12 +562,12 @@
     "standard_cost": 3.02,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "6e970f58-b46c-4144-9439-6319b0f843e4",
-      "82dc0849-9fdb-4fb1-a16c-5cdcc10a962d",
-      "a0d774a9-34e7-4cb9-897e-313b1dcdb1b2",
-      "be1544a8-5d7d-4f33-a03c-0c096bea3284",
-      "cebdf4de-ae9f-42f8-bc9d-a8b52f6719dd",
-      "e94449ba-8c34-4db3-9527-ea08b8992005"
+      "40393509-c40a-47b4-b7e2-073712a2fdde",
+      "5e2fc643-7503-40fd-9f3c-e99ff8ddeb45",
+      "a5fec7eb-c90b-4c98-842a-e273a824de96",
+      "c9a681f8-403d-42b8-958c-60f507e5cd59",
+      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
+      "f6aaa254-dcc3-4927-9ba3-7c870cf00f21"
     ]
   },
   {
@@ -577,8 +577,8 @@
     "standard_cost": 1.14,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "07a40632-36f1-4450-8e6f-655eee93001c",
-      "be1544a8-5d7d-4f33-a03c-0c096bea3284"
+      "40393509-c40a-47b4-b7e2-073712a2fdde",
+      "70991141-f9e2-44d7-b91d-8876abd7069e"
     ]
   },
   {
@@ -588,11 +588,11 @@
     "standard_cost": 4.59,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "07a40632-36f1-4450-8e6f-655eee93001c",
-      "89fb482d-5b77-45c4-99af-b73a7aac7046",
-      "cb9690fe-8fc0-49ab-8ec1-16d1757ad645",
-      "d868765b-870d-4003-b6b7-83ef406104f3",
-      "ffe056d9-6a2b-4c6e-b89f-aadf7d7691c9"
+      "0a497567-adbf-440d-a04d-a77664c5890a",
+      "11377984-a1aa-4585-9904-5f9468666d49",
+      "70991141-f9e2-44d7-b91d-8876abd7069e",
+      "beded468-ac8c-4e81-b044-c861b94334cd",
+      "f2e01ff1-f3e3-42d8-97bb-527f9be92729"
     ]
   },
   {
@@ -602,8 +602,8 @@
     "standard_cost": 4.22,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "a4c4068c-295a-4bab-9686-44e51fc41040",
-      "ffe056d9-6a2b-4c6e-b89f-aadf7d7691c9"
+      "cbfa957a-9561-4870-b6ae-1a26fa3d2df9",
+      "f2e01ff1-f3e3-42d8-97bb-527f9be92729"
     ]
   },
   {
@@ -613,8 +613,8 @@
     "standard_cost": 22.08,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "024b9eb7-e3d6-4cc8-9992-eed95b2698d0",
-      "cebdf4de-ae9f-42f8-bc9d-a8b52f6719dd"
+      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
+      "fb7ce668-6d54-487b-a033-6388049c0dec"
     ]
   },
   {
@@ -624,11 +624,11 @@
     "standard_cost": 8.5,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "0f9aa0e9-5876-4ff4-82d2-0c6da592a119",
-      "89fb482d-5b77-45c4-99af-b73a7aac7046",
-      "8b59b6af-8768-4e00-813a-92acaafd7e1f",
-      "8d40209d-bd9d-4190-8a1a-c778aaf9f4cb",
-      "be1544a8-5d7d-4f33-a03c-0c096bea3284"
+      "04b9bf52-9f54-4686-81b0-2a5bd30c9f56",
+      "0a497567-adbf-440d-a04d-a77664c5890a",
+      "40393509-c40a-47b4-b7e2-073712a2fdde",
+      "7f603748-2b62-4e92-b6db-5768952fd7ff",
+      "f170e41e-4981-456b-974e-2fa0c8bcb6fb"
     ]
   }
 ]

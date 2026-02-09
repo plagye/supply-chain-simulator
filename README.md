@@ -4,11 +4,11 @@ A realistic supply chain simulation for practicing data engineering skills (SQL,
 
 At first, the simulator was pushing the generated JSON lines straight to the database, but I decided that it's better for the learning experience when the pipeline just generates raw JSON files, and it's the user's mission to create the database and upload data to it. This way, one can even omit the database creation step and just play with the generated data, e.g., using only Pandas.
 
-Keep in mind that the JSONs included in the data/ folder of this repo are there just for example/reference. I would suggest just deleting them and generating new static data using the built-in features of the simulation engine.
+Keep in mind that the JSON files in data/ directory are there just for example/reference. I suggest deleting them and generating new master data using the simulation's built-in features.
 
 I'm running the simulation on a Ubuntu Server VM hosted on Azure, and I store all the data in a PostgreSQL Azure server, which is also needed for the simulation to store its current state and to restart from the same point. Feel free to design your own workflow.
 
-Quick User Manual: https://jumpshare.com/share/9wm0HgFKBPtVBGHH2w7g
+Quick User Manual: https://jumpshare.com/share/riGw9gb5XHGVsxg5quEG
 
 ## The Business Scenario
 
@@ -62,7 +62,7 @@ SkyForge's **single plant** is in **Chicago, USA**. All outbound shipments origi
 - **Cost volatility**: Raw material prices drift ±20% over time
 - **Quality issues**: 1-5% of incoming parts fail inspection
 - **Backorders**: When demand exceeds supply, orders are split across multiple shipments
-- **Black swan events**: Major disruptions (5-year historical data only)
+- **Black swan events**: Major disruptions (3-year historical data only)
 
 ---
 
@@ -92,10 +92,10 @@ This simulator generates realistic supply chain events, including:
 - **Split shipments and backorders** (SQL join complexity)
 - **Cost variation** (commodity drift + supplier pricing)
 - **Seasonal patterns** (CNY, holidays, end-of-quarter, day-of-week)
-- **Black swan events** (major disruptions for 5-year history)
+- **Black swan events** (major disruptions for 3-year history)
 - **Data corruption** (1% of events corrupted for error handling practice)
 
-**Your job as data engineer:** The simulation only produces date-partitioned JSONL event files (no loader in this repo). You build the pipeline that parses the JSONL (including corrupted records!), quarantines bad lines, loads valid events into PostgreSQL, designs your schema, joins events, and builds dashboards.
+**Your job as data engineer:** The simulation produces JSONL event files (single file for historical backfill, date-partitioned for batch/live runs; no loader in this repo). You build the pipeline that parses the JSONL (including corrupted records!), quarantines bad lines, loads valid events into PostgreSQL, designs your schema, joins events, and builds dashboards.
 
 ---
 
@@ -150,14 +150,16 @@ Combines `generate` and `simulate` in one command.
 python main.py generate-history --years 3 [--seed 42]
 ```
 
-Generates 1-5 years of historical data in accelerated mode. Events are written to JSON files for manual transfer to PostgreSQL.
+Generates 1–3 years of historical data in accelerated mode. Events are written to a **single JSONL file** (`data/events/history.jsonl`) for speed—no per-day file rollover. All event types are always emitted (orders, shipments, loads, deliveries, invoices, production, etc.). You can transfer the file to PostgreSQL or use it for analysis.
 
 **Options:**
-- `--years` (required): 1-5 years of history
+- `--years` (required): 1, 2, or 3 years of history
 - `--seed`: RNG seed for reproducibility
 - `--start-time`: Start date (default: N years before now)
 
-**Note:** Black swan events are only included when generating 5 years of history.
+**Note:** Black swan events are included only when generating 3 years of history.
+
+**Output:** Historical generation writes one file, `data/events/history.jsonl`. The **run-service** and **simulate** commands use **date-partitioned** JSONL (one file per day under `data/events/`, e.g. `YYYY-MM-DD.jsonl`) for ongoing or short runs. So: one file for bulk historical backfill; per-day files for live or batch simulation.
 
 ### 5) Run 24/7 Service (NEW)
 
@@ -165,7 +167,7 @@ Generates 1-5 years of historical data in accelerated mode. Events are written t
 python main.py run-service [--tick-interval 5] [--resume|--fresh] [--seed 42]
 ```
 
-Runs the simulation as a continuous service. Events are written directly to PostgreSQL.
+Runs the simulation as a continuous service. Events are written to date-partitioned JSONL in `data/events/`. Only simulation state (for resume) is saved to PostgreSQL.
 
 **Options:**
 - `--tick-interval`: Seconds between ticks (default: 5.0)
@@ -282,9 +284,9 @@ The `simulate.engine` section controls simulation behavior:
 - **Month-end** (last 3 days): +20% demand
 - **Quarter-end** (Mar, Jun, Sep, Dec last 5 days): Additional +15%
 
-### Black Swan Events (5-year history only)
+### Black Swan Events (3-year history only)
 
-Random major disruption placed in years 2-4:
+Random major disruption placed in year 2 of a 3-year run:
 
 | Event | Duration | Demand | Lead Time | Affected |
 |-------|----------|--------|-----------|----------|
@@ -313,9 +315,12 @@ Random major disruption placed in years 2-4:
 
 ### Event Log (JSONL)
 
-All simulation events are written to **date-partitioned** JSONL files under `data/events/`: one file per simulation day, named `YYYY-MM-DD.jsonl`. The simulation rolls over to a new file when the simulated day changes. You can override the directory with config key `events_dir` or environment variable `EVENTS_DIR` (default: `data/events`).
+Event output depends on the command:
 
-Example layout: `data/events/2026-02-02.jsonl`, `data/events/2026-02-03.jsonl`, etc. Each line is one event:
+- **Historical generation** (`generate-history`): one file, `data/events/history.jsonl`. No per-day rollover, so generation stays fast.
+- **Run-service and simulate**: **date-partitioned** JSONL under `data/events/`—one file per simulation day, named `YYYY-MM-DD.jsonl`. The simulation rolls over to a new file when the simulated day changes. You can override the directory with config key `events_dir` or environment variable `EVENTS_DIR` (default: `data/events`).
+
+Example layout for date-partitioned mode: `data/events/2026-02-02.jsonl`, `data/events/2026-02-03.jsonl`, etc. Each line is one event:
 
 ```json
 {
@@ -337,7 +342,7 @@ Corruption metadata (for verifying your pipeline's quarantine) is written to `da
 | `InvoiceCreated` | Invoice issued for shipment | `invoice_id`, `order_id`, `customer_id`, `product_id`, `qty`, `amount`, `currency`, `due_date` |
 | `PaymentReceived` | Customer payment received | `invoice_id`, `order_id`, `amount`, `paid_at`, `on_time` |
 | `DemandForecastCreated` | Demand forecast snapshot | `snapshot_date`, `product_id`, `forecast_qty`, `horizon_days`, `forecast_date` |
-| `MaterialRequirementCreated` | Material requirement from order/BOM | `requirement_id`, `product_id`, `part_id`, `required_qty`, `required_by_date`, `source`, `order_id` |
+| `MaterialRequirementsCreated` | Material requirements from order (BOM explosion; one event per order) | `order_id`, `product_id`, `source`, `required_by_date`, `requirements` (array of objects with `part_id`, `required_qty`, `required_by_date`) |
 | `SOPSnapshotCreated` | S&OP planning snapshot | `plan_date`, `scenario`, `product_id`, `demand_forecast_qty`, `supply_plan_qty`, `inventory_plan_qty` |
 | `PromoActive` | Promo / demand shock started | `promo_id`, `start_time`, `end_time`, `demand_multiplier` |
 | `CTCMetricsEmitted` | Monthly cash-to-cash metrics snapshot | `period_start`, `period_end`, `avg_days_receivables`, `avg_days_payables`, `avg_days_inventory` |
@@ -408,7 +413,7 @@ This simulator is designed to give you real-world data engineering challenges:
 # 1. Generate master data
 python main.py generate --seed 42
 
-# 2. Generate 3 years of historical data (events to date-partitioned JSONL in data/events/)
+# 2. Generate 3 years of historical data (events to data/events/history.jsonl)
 python main.py generate-history --years 3 --seed 42
 
 # 3. (Your pipeline) Parse JSONL, quarantine bad lines, load valid events into PostgreSQL
@@ -422,6 +427,24 @@ python main.py run-service --tick-interval 5 --fresh
 ```bash
 python main.py all --ticks 720 --seed 42
 ```
+
+---
+
+## Design and implementation notes
+
+Summary of how event output and performance are set up:
+
+- **Event output:** Historical generation (`generate-history`) writes a **single file**, `data/events/history.jsonl`, with no per-day file rollover, so multi-year runs stay fast. The **simulate** and **run-service** commands write **date-partitioned** JSONL (one file per simulation day, `YYYY-MM-DD.jsonl`) for batch and live use. So: one file for bulk historical backfill; per-day files for ongoing or short runs.
+
+- **Historical cap and black swan:** You can generate 1, 2, or 3 years of history only. Black swan (major disruption) events are included only when generating **3 years**; the event is placed in year 2 of the run.
+
+- **Event I/O and performance:** Events are flushed to disk only when the simulation day rolls over (when switching to the next day’s file) and when the engine saves state on exit—not after every event. That keeps historical generation from being dominated by I/O when many events (orders, loads, deliveries) are emitted.
+
+- **Material requirements (BOM explosion):** Each sales order triggers one **MaterialRequirementsCreated** event (not one per BOM line). The payload includes `order_id`, `product_id`, `source`, `required_by_date`, and a **requirements** array of `{part_id`, `required_qty`, `required_by_date}`. Pipelines can explode this array to one row per part if needed. This avoids the previous design that emitted ~57 events per order and caused huge file sizes and run times.
+
+- **All event types:** Orders, shipments, loads, deliveries, invoices, production, procurement, and the above material-requirements event are always emitted (no “with/without deliveries” toggle). Config can still turn features like `delivery_enabled` or `invoice_enabled` on or off for the engine globally.
+
+---
 
 ## Acknowledgements
 

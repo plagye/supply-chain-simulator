@@ -1,6 +1,6 @@
 [
   {
-    "id": "e7e50e5c-f01c-4e25-a8ef-84dcead19db3",
+    "id": "0c7d59c7-4481-45cd-8947-e80c7b3c5cff",
     "name": "Hansa Components",
     "country": "China",
     "reliability_score": 0.892,
@@ -8,7 +8,7 @@
     "price_multiplier": 0.96
   },
   {
-    "id": "ffe056d9-6a2b-4c6e-b89f-aadf7d7691c9",
+    "id": "f2e01ff1-f3e3-42d8-97bb-527f9be92729",
     "name": "Nova Automation Inc",
     "country": "China",
     "reliability_score": 0.922,
@@ -16,7 +16,7 @@
     "price_multiplier": 0.96
   },
   {
-    "id": "19e5a51a-5622-45d6-8d57-8edd8e85836c",
+    "id": "f75055e9-5e31-4795-8b75-7c7b52eaa9e2",
     "name": "Apex Engineering Inc",
     "country": "Germany",
     "reliability_score": 0.77,
@@ -24,7 +24,7 @@
     "price_multiplier": 0.91
   },
   {
-    "id": "fa89dcfe-20c4-4203-b1d3-6904c3d93241",
+    "id": "eb8bf817-ea5c-4f2b-8cb0-b9987fe7ab12",
     "name": "Kestrel-Machinery Works",
     "country": "Germany",
     "reliability_score": 0.826,
@@ -32,7 +32,7 @@
     "price_multiplier": 0.82
   },
   {
-    "id": "8b59b6af-8768-4e00-813a-92acaafd7e1f",
+    "id": "04b9bf52-9f54-4686-81b0-2a5bd30c9f56",
     "name": "Titan Alloy GmbH",
     "country": "China",
     "reliability_score": 0.827,
@@ -40,7 +40,7 @@
     "price_multiplier": 0.86
   },
   {
-    "id": "8d40209d-bd9d-4190-8a1a-c778aaf9f4cb",
+    "id": "f170e41e-4981-456b-974e-2fa0c8bcb6fb",
     "name": "Shenzhen Machinery Works",
     "country": "Taiwan",
     "reliability_score": 0.808,
@@ -48,7 +48,7 @@
     "price_multiplier": 0.95
   },
   {
-    "id": "024b9eb7-e3d6-4cc8-9992-eed95b2698d0",
+    "id": "fb7ce668-6d54-487b-a033-6388049c0dec",
     "name": "Helios Systems Co.",
     "country": "Germany",
     "reliability_score": 0.814,
@@ -56,7 +56,7 @@
     "price_multiplier": 0.81
   },
   {
-    "id": "cebdf4de-ae9f-42f8-bc9d-a8b52f6719dd",
+    "id": "cb96a579-bdd1-4460-a950-fa98ad9074e8",
     "name": "Nova Components Group",
     "country": "China",
     "reliability_score": 0.768,
@@ -64,7 +64,7 @@
     "price_multiplier": 0.9
   },
   {
-    "id": "0f9aa0e9-5876-4ff4-82d2-0c6da592a119",
+    "id": "7f603748-2b62-4e92-b6db-5768952fd7ff",
     "name": "Atlas Alloy Ltd.",
     "country": "Germany",
     "reliability_score": 0.809,
@@ -72,7 +72,7 @@
     "price_multiplier": 0.9
   },
   {
-    "id": "b96f8234-8477-4548-889b-bfd73dfa639e",
+    "id": "ec6c04d6-ecb4-43d7-8905-e3f4463f1273",
     "name": "Boreal-Components",
     "country": "Taiwan",
     "reliability_score": 0.721,
@@ -80,7 +80,7 @@
     "price_multiplier": 0.84
   },
   {
-    "id": "5e5a64a1-736e-4841-8de8-95ab9bd9e2cb",
+    "id": "ef1ec63c-eca0-4c12-8e53-1a35012e3582",
     "name": "Blue Ridge Precision Ltd",
     "country": "China",
     "reliability_score": 0.978,
@@ -88,7 +88,7 @@
     "price_multiplier": 1.05
   },
   {
-    "id": "5832c340-892a-4e30-add8-016581d97192",
+    "id": "5a2701cb-ea25-456b-82e8-0194e285c4d8",
     "name": "Nova Alloy GmbH",
     "country": "China",
     "reliability_score": 0.795,
@@ -96,7 +96,7 @@
     "price_multiplier": 0.87
   },
   {
-    "id": "a4c4068c-295a-4bab-9686-44e51fc41040",
+    "id": "cbfa957a-9561-4870-b6ae-1a26fa3d2df9",
     "name": "Titan-Machinery Holdings",
     "country": "China",
     "reliability_score": 0.965,
@@ -104,7 +104,7 @@
     "price_multiplier": 1.11
   },
   {
-    "id": "be1544a8-5d7d-4f33-a03c-0c096bea3284",
+    "id": "40393509-c40a-47b4-b7e2-073712a2fdde",
     "name": "Pacific Automation Inc",
     "country": "China",
     "reliability_score": 0.779,
@@ -112,7 +112,7 @@
     "price_multiplier": 0.95
   },
   {
-    "id": "89fb482d-5b77-45c4-99af-b73a7aac7046",
+    "id": "0a497567-adbf-440d-a04d-a77664c5890a",
     "name": "Nova-Dynamics Group",
     "country": "China",
     "reliability_score": 0.741,
@@ -120,7 +120,7 @@
     "price_multiplier": 0.82
   },
   {
-    "id": "a0d774a9-34e7-4cb9-897e-313b1dcdb1b2",
+    "id": "a5fec7eb-c90b-4c98-842a-e273a824de96",
     "name": "Nova Logistics Group",
     "country": "Taiwan",
     "reliability_score": 0.904,
@@ -128,7 +128,7 @@
     "price_multiplier": 1.0
   },
   {
-    "id": "5a75fa93-0089-418a-b57b-7989c30facc4",
+    "id": "7864feb7-c35e-4178-8a65-b6bf094d5963",
     "name": "Apex Industries Inc",
     "country": "Germany",
     "reliability_score": 0.775,
@@ -136,7 +136,7 @@
     "price_multiplier": 0.85
   },
   {
-    "id": "d2b7a5fe-31f9-4131-8c28-63d9e7077785",
+    "id": "ec124747-ba5a-4a00-8c74-8b3ce6642e34",
     "name": "Rhein-Steel",
     "country": "USA",
     "reliability_score": 0.788,
@@ -144,7 +144,7 @@
     "price_multiplier": 0.91
   },
   {
-    "id": "6e970f58-b46c-4144-9439-6319b0f843e4",
+    "id": "5e2fc643-7503-40fd-9f3c-e99ff8ddeb45",
     "name": "Taipei Foundry",
     "country": "China",
     "reliability_score": 0.852,
@@ -152,7 +152,7 @@
     "price_multiplier": 1.03
   },
   {
-    "id": "714fc316-da45-48dc-a620-158bc085fc00",
+    "id": "f610ec86-8e7f-4f8c-8a60-f6ff498b6f3d",
     "name": "Apex Systems Inc.",
     "country": "China",
     "reliability_score": 0.862,
@@ -160,7 +160,7 @@
     "price_multiplier": 1.04
   },
   {
-    "id": "b45318b2-5a2a-44ca-9916-8c09d57e0540",
+    "id": "84920a05-62ee-4528-a1a6-85df1f62e286",
     "name": "Blue Ridge Dynamics Co.",
     "country": "China",
     "reliability_score": 0.964,
@@ -168,7 +168,7 @@
     "price_multiplier": 1.1
   },
   {
-    "id": "07a40632-36f1-4450-8e6f-655eee93001c",
+    "id": "70991141-f9e2-44d7-b91d-8876abd7069e",
     "name": "Titan Manufacturing PLC",
     "country": "USA",
     "reliability_score": 0.721,
@@ -176,7 +176,7 @@
     "price_multiplier": 0.82
   },
   {
-    "id": "b7ad1304-197e-49e3-911f-a27d893fc285",
+    "id": "cee40f83-f16f-44f6-907a-17a11e161dfb",
     "name": "Pacific Alloy PLC",
     "country": "Germany",
     "reliability_score": 0.858,
@@ -184,7 +184,7 @@
     "price_multiplier": 0.99
   },
   {
-    "id": "cb9690fe-8fc0-49ab-8ec1-16d1757ad645",
+    "id": "11377984-a1aa-4585-9904-5f9468666d49",
     "name": "Rhein Forge Inc.",
     "country": "China",
     "reliability_score": 0.902,
@@ -192,7 +192,7 @@
     "price_multiplier": 0.97
   },
   {
-    "id": "6ceffcc7-3cef-454f-956f-5fab8ed388f7",
+    "id": "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
     "name": "Boreal Components PLC",
     "country": "China",
     "reliability_score": 0.801,
@@ -200,7 +200,7 @@
     "price_multiplier": 0.91
   },
   {
-    "id": "82dc0849-9fdb-4fb1-a16c-5cdcc10a962d",
+    "id": "f6aaa254-dcc3-4927-9ba3-7c870cf00f21",
     "name": "Sino Precision",
     "country": "China",
     "reliability_score": 0.718,
@@ -208,7 +208,7 @@
     "price_multiplier": 0.87
   },
   {
-    "id": "e9a8963c-8a3c-4874-87c2-d5604db245c1",
+    "id": "fc42fe54-0c9d-4d17-a56d-a8c042867ea6",
     "name": "Kestrel Fabrication Ltd",
     "country": "Germany",
     "reliability_score": 0.862,
@@ -216,7 +216,7 @@
     "price_multiplier": 1.03
   },
   {
-    "id": "d868765b-870d-4003-b6b7-83ef406104f3",
+    "id": "beded468-ac8c-4e81-b044-c861b94334cd",
     "name": "Pacific Bearings",
     "country": "Taiwan",
     "reliability_score": 0.757,
@@ -224,7 +224,7 @@
     "price_multiplier": 0.93
   },
   {
-    "id": "e94449ba-8c34-4db3-9527-ea08b8992005",
+    "id": "c9a681f8-403d-42b8-958c-60f507e5cd59",
     "name": "Sino Logistics",
     "country": "USA",
     "reliability_score": 0.716,
@@ -232,7 +232,7 @@
     "price_multiplier": 0.82
   },
   {
-    "id": "a6690f0c-a779-4082-9532-2674f9abe216",
+    "id": "18ec6d81-8939-4500-8640-7b91b7d1a2b9",
     "name": "Rhein Manufacturing PLC",
     "country": "China",
     "reliability_score": 0.757,

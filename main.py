@@ -190,26 +190,28 @@ def run_history_generation(
     start_time: datetime | None,
     engine_config: dict[str, Any] | None = None,
 ) -> None:
-    """Generate N years of historical data to JSON files.
+    """Generate N years of historical data to a single JSONL file.
     
     This runs the simulation in accelerated mode (no delays) to build
     up historical data that can later be manually transferred to PostgreSQL.
+    Events are written to a single file for speed (no per-day rollover).
     """
-    if years < 1 or years > 5:
-        print(f"Error: years must be between 1 and 5, got {years}", file=sys.stderr)
+    if years < 1 or years > 3:
+        print(f"Error: years must be between 1 and 3, got {years}", file=sys.stderr)
         sys.exit(1)
     
     # Calculate total ticks (hours in N years)
     # Using 365.25 days/year to account for leap years
     ticks = int(years * 365.25 * 24)
-    include_black_swan = (years == 5)
+    include_black_swan = (years == 3)
+    history_output_path = DATA_DIR / "events" / "history.jsonl"
     
     print(f"Generating {years} year(s) of historical data...")
     print(f"  Total ticks: {ticks:,} ({ticks // 24:,} days)")
     if include_black_swan:
-        print("  Black swan event: ENABLED (5-year mode)")
+        print("  Black swan event: ENABLED (3-year mode)")
     else:
-        print("  Black swan event: disabled (only enabled for 5-year history)")
+        print("  Black swan event: disabled (only enabled for 3-year history)")
     
     try:
         engine = WorldEngine(
@@ -219,6 +221,8 @@ def run_history_generation(
             config=engine_config,
             include_black_swan=include_black_swan,
             simulation_years=years,
+            events_single_file=True,
+            events_single_file_path=history_output_path,
         )
     except DataLoadError as e:
         print(f"Error loading data: {e}", file=sys.stderr)
@@ -253,7 +257,7 @@ def run_history_generation(
     elapsed_total = time.time() - start_real_time
     print(f"\nHistorical data generation complete!")
     print(f"  Time elapsed: {elapsed_total / 60:.1f} minutes")
-    print(f"  Events logged to: date-partitioned files in {engine.events_dir}")
+    print(f"  Events logged to: {history_output_path}")
     print(f"  Final sim date: {engine.current_time.strftime('%Y-%m-%d %H:%M:%S UTC')}")
     print("\nNext steps:")
     print("  1. Review the generated JSON files in the data/ directory")
@@ -470,7 +474,7 @@ Examples:
         help="ISO-8601 start time (e.g., 2026-02-02T08:00:00Z).",
     )
 
-    # generate-history command (NEW)
+    # generate-history command
     hist = sub.add_parser(
         "generate-history",
         help="Generate N years of historical data to JSON files"
@@ -479,8 +483,8 @@ Examples:
         "--years",
         type=int,
         required=True,
-        choices=[1, 2, 3, 4, 5],
-        help="Number of years of history to generate (1-5). Black swan events only for 5 years.",
+        choices=[1, 2, 3],
+        help="Number of years of history to generate (1-3). Black swan event only when generating 3 years.",
     )
     hist.add_argument("--seed", type=int, default=None, help="Simulation RNG seed.")
     hist.add_argument(
@@ -490,7 +494,7 @@ Examples:
         help="ISO-8601 start time for historical data (default: N years before now).",
     )
 
-    # run-service command (NEW)
+    # run-service command
     svc = sub.add_parser(
         "run-service",
         help="Run as a continuous 24/7 service (writes to PostgreSQL)"
@@ -559,7 +563,7 @@ Examples:
         seed = resolve_value(args.seed, section, "seed", 42)
         start_raw = resolve_value(args.start_time, section, "start_time", None)
         engine_config = section.get("engine", {})
-        
+
         # Default start time: N years before now
         if start_raw:
             try:
