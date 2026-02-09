@@ -1,9 +1,6 @@
-# Branch: feature/live-api-and-drone-variants
+# Branch layout
 
-This branch is the **new active direction** for the supply chain simulator.
+- **main** — Current version: 10 drone products (D-101..D-303), 10 shared parts, live API, code-based routes and delivery. Use this for all new work.
+- **legacy** — Previous version: single-product (DRONE-X1) simulator. Preserved for reference; not actively developed.
 
-- **10 drone products** (D-101..D-303) and **10 shared parts** (P-001..P-010)
-- **Minimal live API** (call and get values: inventory, status, orders, deliveries)
-- **main** is deprecated for active development of this 10-drone + live-API scenario
-
-Work here; merge to main when ready to make this the default.
+The former `feature/live-api-and-drone-variants` branch has been promoted to `main`. The old `main` has been renamed to `legacy` and pushed to the remote.
