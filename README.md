@@ -47,6 +47,12 @@ Customers are split into two tiers:
 - **Tier 1** - Government/defense contracts with strict SLAs and penalty clauses
 - **Tier 2** - Commercial customers with standard terms
 
+Each customer has a **country**, a **structured address** (street, city, state, postal_code, country), and a **delivery_location_code** (see below) that identifies the DC they receive shipments at.
+
+### Geography and location codes
+
+SkyForge's **single plant** is in **Chicago, USA**. All outbound shipments originate there. Facilities (plant and distribution/delivery centers) and routes use a **location code** in the form `COUNTRY_CITY` (e.g. `USA_CHI` for Chicago, `USA_DET` for Detroit, `DEU_FRA` for Frankfurt). **Routes are always described as CODE → CODE** (origin to destination). Each customer has a **delivery_location_code** in the same format (the code of the DC that serves them), so the destination side of every route is explicit on the customer record. Outbound routes in `routes.json` include `origin_location_code` and `destination_location_code`; the engine looks up routes by these codes.
+
 ### The Challenges You'll Analyze
 
 - **Demand seasonality**: Q4 surge, summer lull, end-of-quarter rushes, Friday spikes
@@ -118,7 +124,7 @@ supply-chain-simulator/
 python main.py generate [--seed 42]
 ```
 
-Creates all master data files (suppliers, parts, BOM, customers, inventory, production schedule).
+Creates all master data files: suppliers, parts, BOM, **facilities** (with `location_code`), **routes** (inbound and outbound, CODE → CODE), customers (with country, structured address, `delivery_location_code`), inventory, and a minimal production schedule. All data-generator scripts live in `scripts/` and are invoked via `main.py` (e.g. `python main.py generate`).
 
 ### 2) Run Simulation (Batch Mode)
 
@@ -297,9 +303,11 @@ Random major disruption placed in years 2-4:
 | `suppliers.json` | Supplier master with reliability scores |
 | `parts.json` | Part catalog with costs and valid suppliers |
 | `bom.json` | Bill of materials for DRONE-X1 |
-| `customers.json` | Customer master with contract tiers |
+| `customers.json` | Customer master: country, structured address (street, city, state, postal_code, country), delivery_location_code, contract tiers |
 | `inventory.json` | Current inventory state (updated by simulation) |
-| `production_schedule.json` | Active jobs (updated by simulation) |
+| `production_schedule.json` | Active jobs (updated by simulation). May be empty; the simulation creates jobs on demand when orders or backorders need product. |
+| `facilities.json` | Plant (Chicago) and distribution/delivery facilities; each has `facility_id`, `location_code` (e.g. USA_CHI, USA_DET). Used for delivery routes and load dispatch. |
+| `routes.json` | Inbound (plant ← supplier country) and outbound (plant → DC) routes. Each route has `origin_location_code` and `destination_location_code` (CODE → CODE), plus distance and transit days. |
 
 ### Event Log (JSONL)
 
@@ -324,6 +332,15 @@ Corruption metadata (for verifying your pipeline's quarantine) is written to `da
 | `SalesOrderCreated` | Customer places order | `order_id`, `customer_id`, `product_id`, `qty` |
 | `ShipmentCreated` | Order shipped in full | `order_id`, `product_id`, `qty`, `remaining_stock` |
 | `PartialShipmentCreated` | Partial fulfillment | `order_id`, `qty_shipped`, `qty_backordered` |
+| `InvoiceCreated` | Invoice issued for shipment | `invoice_id`, `order_id`, `customer_id`, `product_id`, `qty`, `amount`, `currency`, `due_date` |
+| `PaymentReceived` | Customer payment received | `invoice_id`, `order_id`, `amount`, `paid_at`, `on_time` |
+| `DemandForecastCreated` | Demand forecast snapshot | `snapshot_date`, `product_id`, `forecast_qty`, `horizon_days`, `forecast_date` |
+| `MaterialRequirementCreated` | Material requirement from order/BOM | `requirement_id`, `product_id`, `part_id`, `required_qty`, `required_by_date`, `source`, `order_id` |
+| `SOPSnapshotCreated` | S&OP planning snapshot | `plan_date`, `scenario`, `product_id`, `demand_forecast_qty`, `supply_plan_qty`, `inventory_plan_qty` |
+| `PromoActive` | Promo / demand shock started | `promo_id`, `start_time`, `end_time`, `demand_multiplier` |
+| `CTCMetricsEmitted` | Monthly cash-to-cash metrics snapshot | `period_start`, `period_end`, `avg_days_receivables`, `avg_days_payables`, `avg_days_inventory` |
+| `LoadCreated` | Load dispatched for delivery | `load_id`, `order_id`, `customer_id`, `route_id`, `product_id`, `qty`, `weight_lbs`, `pieces`, `scheduled_pickup`, `scheduled_delivery`, `distance_miles` |
+| `DeliveryEvent` | Pickup or delivery at facility | `event_id`, `load_id`, `event_type` (Pickup/Delivery), `facility_id`, `scheduled_datetime`, `actual_datetime`, `detention_minutes`, `on_time_flag` |
 | `BackorderCreated` | Order cannot be fulfilled | `order_id`, `qty_backordered`, `reason` |
 | `BackorderFulfilled` | Backorder shipped | `order_id`, `qty_shipped`, `qty_still_pending` |
 | `ProductionJobCreated` | New production job | `job_id`, `product_id`, `production_duration_hours` |
@@ -373,6 +390,7 @@ This simulator is designed to give you real-world data engineering challenges:
 - Calculate metrics (lead times, on-time delivery, inventory turns)
 - Identify seasonality patterns in the data
 - Create dashboards in PowerBI, Tableau, or Metabase
+- Join orders to loads to delivery events (`LoadCreated`, `DeliveryEvent`) for logistics and on-time delivery analytics; load these into `fact_loads` and `fact_delivery_events` if using a star schema
 
 **Error Handling:**
 - Check `data/events/_meta/corruption_meta_log.jsonl` to verify your pipeline catches all corrupted records

@@ -124,12 +124,18 @@ def generate_all(seed: int | None = None) -> None:
     run_script("generate_parts.py", seed_args)
     print("Generating BOM...")
     run_script("generate_bom.py", [])
+    print("Generating facilities...")
+    run_script("generate_facilities.py", [])
+    print("Generating routes...")
+    run_script("generate_routes.py", [])
     print("Generating customers...")
     run_script("generate_customers.py", seed_args)
     print("Generating inventory...")
     run_script("generate_inventory.py", seed_args)
-    print("Generating production schedule...")
-    run_script("generate_production_schedule.py", seed_args)
+    # production_schedule.json is optional; write minimal file so it exists after generate
+    (DATA_DIR / "production_schedule.json").write_text(
+        '{"active_jobs": []}\n', encoding="utf-8"
+    )
     print("Data generation complete.")
 
 

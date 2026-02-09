@@ -92,6 +92,33 @@ DEFAULT_CONFIG = {
     "seasonality_enabled": True,
     "demand_seasonality_strength": 1.0,
     "supplier_seasonality_strength": 1.0,
+    # Invoicing & payment (Order to Cash)
+    "invoice_enabled": True,
+    "invoice_payment_days_min": 14,
+    "invoice_payment_days_max": 30,
+    "payment_late_probability": 0.1,
+    "payment_late_days_extra": 5,
+    "default_unit_price": 1250.0,
+    # Forecasting (Tactical)
+    "forecast_enabled": True,
+    "forecast_horizon_days": 7,
+    "forecast_window_days": 14,
+    # Requirement planning (MRP-style)
+    "requirements_lead_time_days": 30,
+    # S&OP snapshots (Tactical)
+    "sop_enabled": True,
+    "sop_frequency": "monthly",
+    # Active demand management (promos)
+    "promo_enabled": True,
+    "promo_probability": 0.05,
+    "promo_duration_days": 7,
+    "promo_demand_multiplier_min": 1.2,
+    "promo_demand_multiplier_max": 1.8,
+    # Delivery (loads and delivery events)
+    "delivery_enabled": True,
+    "delivery_transit_delay_max_hours": 12,
+    "drone_x1_weight_lbs": 5.0,
+    "drone_x1_pieces_per_unit": 1,
 }
 
 # Demand seasonality by month (multipliers)
@@ -189,6 +216,16 @@ def load_json(path: Path) -> Any:
         raise DataLoadError(f"Invalid JSON in {path}: {e}") from e
 
 
+def load_json_or_default(path: Path, default: Any) -> Any:
+    """Load JSON file if it exists; otherwise return default."""
+    if not path.exists():
+        return default
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return default
+
+
 @dataclass
 class SalesOrder:
     order_id: str
@@ -219,6 +256,36 @@ class PendingBackorder:
     qty_remaining: int
     original_qty: int
     created_at: datetime
+
+
+@dataclass
+class PendingInvoice:
+    """Tracks an invoice awaiting payment."""
+    invoice_id: str
+    order_id: str
+    customer_id: str
+    product_id: str
+    qty: int
+    amount: float
+    currency: str
+    due_date: datetime
+
+
+@dataclass
+class PendingDelivery:
+    """Tracks a load scheduled for delivery (Pickup/Delivery events when due)."""
+    load_id: str
+    order_id: str
+    customer_id: str
+    route_id: str
+    product_id: str
+    qty: int
+    weight_lbs: float
+    pieces: int
+    scheduled_pickup: datetime
+    scheduled_delivery: datetime
+    origin_facility_id: str
+    destination_facility_id: str
 
 
 @dataclass
@@ -325,10 +392,17 @@ class WorldEngine:
         self.parts = load_json(self.data_dir / "parts.json")
         self.bom = load_json(self.data_dir / "bom.json")
         self.customers = load_json(self.data_dir / "customers.json")
+        self.facilities = load_json_or_default(self.data_dir / "facilities.json", [])
+        routes_data = load_json_or_default(self.data_dir / "routes.json", {"inbound": [], "outbound": []})
+        self.routes_inbound = routes_data.get("inbound", [])
+        self.routes_outbound = routes_data.get("outbound", [])
 
         # Dynamic state
         self.inventory = load_json(self.data_dir / "inventory.json")
-        self.production_schedule = load_json(self.data_dir / "production_schedule.json")
+        self.production_schedule = load_json_or_default(
+            self.data_dir / "production_schedule.json",
+            {"active_jobs": []},
+        )
 
         # Index master data for quick lookup
         self.parts_by_id = {p["part_id"]: p for p in self.parts if isinstance(p, dict) and "part_id" in p}
@@ -339,6 +413,29 @@ class WorldEngine:
         
         # Pending backorders awaiting fulfillment
         self._pending_backorders: list[PendingBackorder] = []
+        
+        # Pending invoices awaiting payment (Order to Cash)
+        self._pending_invoices: list[PendingInvoice] = []
+        
+        # Demand history for forecasting: list of (date, product_id, qty) or dict by (date, product_id)
+        self._demand_history: list[tuple[date, str, int]] = []
+        self._last_forecast_date: date | None = None  # last sim date we emitted forecast
+        
+        # Allocation: FIFO queue of (job_id, qty) per product for traceability
+        self._finished_good_sources: dict[str, list[tuple[str, int]]] = {}
+        
+        # S&OP: last period we emitted a snapshot (first day of month or week)
+        self._last_sop_period: tuple[int, int] | None = None  # (year, month) or (year, week)
+        self._last_forecast_by_product: dict[str, float] = {}  # for S&OP snapshot
+        
+        # CTC: last month we emitted metrics (year, month)
+        self._last_ctc_month: tuple[int, int] | None = None
+        
+        # Active promos: list of {promo_id, end_time, multiplier}
+        self._active_promos: list[dict[str, Any]] = []
+        
+        # Pending deliveries (loads awaiting delivery completion)
+        self._pending_deliveries: list[PendingDelivery] = []
         
         # Track parts with pending reorders to avoid duplicate POs
         self._parts_on_order: set[str] = set()
@@ -528,10 +625,17 @@ class WorldEngine:
         """
         self.current_time += timedelta(hours=1)
         self.tick_count += 1
+        self._emit_daily_forecast()
+        self._emit_sop_snapshot()
+        self._emit_monthly_ctc()
+        self._expire_promos()
+        self._maybe_start_promo()
         self._check_black_swan_events()
         self._apply_daily_cost_drift()
         self._process_pending_purchase_orders()
         self._process_pending_backorders()
+        self._process_pending_invoices()
+        self._process_pending_deliveries()
         self._check_reorder_points()
         self.generate_demand()
         self.run_production()
@@ -849,27 +953,92 @@ class WorldEngine:
             self.inventory[backorder.product_id]["qty_on_hand"] = stock - qty_to_ship
             backorder.qty_remaining -= qty_to_ship
             
-            self._log_event(
-                "BackorderFulfilled",
-                {
-                    "order_id": backorder.order_id,
-                    "customer_id": backorder.customer_id,
-                    "product_id": backorder.product_id,
-                    "qty_shipped": qty_to_ship,
-                    "qty_still_pending": backorder.qty_remaining,
-                    "original_order_qty": backorder.original_qty,
-                    "remaining_stock": self.inventory[backorder.product_id]["qty_on_hand"],
-                },
+            job_id = self._allocated_job_for_fulfillment(backorder.product_id, qty_to_ship)
+            unit_price = self.config.get("default_unit_price", 1250.0)
+            amount = round(unit_price * qty_to_ship, 2)
+            payload = {
+                "order_id": backorder.order_id,
+                "customer_id": backorder.customer_id,
+                "product_id": backorder.product_id,
+                "qty_shipped": qty_to_ship,
+                "qty_still_pending": backorder.qty_remaining,
+                "original_order_qty": backorder.original_qty,
+                "remaining_stock": self.inventory[backorder.product_id]["qty_on_hand"],
+                "allocation_source": "production_job" if job_id else "on_hand",
+                "unit_price": unit_price,
+                "amount": amount,
+            }
+            if job_id:
+                payload["allocated_from_production_job_id"] = job_id
+            self._log_event("BackorderFulfilled", payload)
+            self._create_invoice(
+                order_id=backorder.order_id,
+                customer_id=backorder.customer_id,
+                product_id=backorder.product_id,
+                qty=qty_to_ship,
             )
-            
+            self._create_load_and_schedule_delivery(
+                order_id=backorder.order_id,
+                customer_id=backorder.customer_id,
+                product_id=backorder.product_id,
+                qty=qty_to_ship,
+            )
             # If still has remaining, keep in pending
             if backorder.qty_remaining > 0:
                 still_pending.append(backorder)
         
         self._pending_backorders = still_pending
 
+    def _expire_promos(self) -> None:
+        """Remove promos that have ended."""
+        if not self.config.get("promo_enabled", False):
+            return
+        self._active_promos = [p for p in self._active_promos if self.current_time < p["end_time"]]
+
+    def _maybe_start_promo(self) -> None:
+        """With probability start a new promo (demand multiplier for a period)."""
+        if not self.config.get("promo_enabled", False):
+            return
+        if self.rng.random() >= self.config.get("promo_probability", 0.05):
+            return
+        duration_days = self.config.get("promo_duration_days", 7)
+        end_time = self.current_time + timedelta(days=duration_days)
+        mult_min = self.config.get("promo_demand_multiplier_min", 1.2)
+        mult_max = self.config.get("promo_demand_multiplier_max", 1.8)
+        multiplier = self.rng.uniform(mult_min, mult_max)
+        promo_id = str(uuid.uuid4())
+        self._active_promos.append({
+            "promo_id": promo_id,
+            "end_time": end_time,
+            "multiplier": multiplier,
+        })
+        self._log_event(
+            "PromoActive",
+            {
+                "promo_id": promo_id,
+                "start_time": iso_utc(self.current_time),
+                "end_time": iso_utc(end_time),
+                "demand_multiplier": round(multiplier, 2),
+            },
+        )
+
+    def _get_promo_multiplier(self) -> float:
+        """Product of active promo multipliers (1.0 if none)."""
+        if not self._active_promos:
+            return 1.0
+        result = 1.0
+        for p in self._active_promos:
+            result *= p.get("multiplier", 1.0)
+        return result
+
+    def _get_active_promo_id(self) -> str | None:
+        """Return one active promo_id if any (for attribution)."""
+        if not self._active_promos:
+            return None
+        return self._active_promos[0].get("promo_id")
+
     def _get_demand_probability(self) -> float:
-        """Get demand probability based on time of day and seasonality."""
+        """Get demand probability based on time of day, seasonality, and promos."""
         if self._is_business_hours():
             base_prob = self.config["demand_probability_business_hours"]
         else:
@@ -877,7 +1046,9 @@ class WorldEngine:
         
         # Apply seasonality
         seasonal_factor = self._get_demand_seasonality_factor()
-        return base_prob * seasonal_factor
+        # Apply promo multiplier
+        promo_factor = self._get_promo_multiplier()
+        return base_prob * seasonal_factor * promo_factor
 
     def generate_demand(self) -> None:
         """
@@ -923,15 +1094,23 @@ class WorldEngine:
             qty=qty,
             created_at=iso_utc(self.current_time),
         )
-        self._log_event(
-            "SalesOrderCreated",
-            {
-                "order_id": order.order_id,
-                "customer_id": order.customer_id,
-                "product_id": order.product_id,
-                "qty": order.qty,
-            },
-        )
+        unit_price = self.config.get("default_unit_price", 1250.0)
+        line_total = round(unit_price * order.qty, 2)
+        payload: dict[str, Any] = {
+            "order_id": order.order_id,
+            "customer_id": order.customer_id,
+            "product_id": order.product_id,
+            "qty": order.qty,
+            "unit_price": unit_price,
+            "line_total": line_total,
+        }
+        promo_id = self._get_active_promo_id()
+        if promo_id:
+            payload["promo_id"] = promo_id
+        self._log_event("SalesOrderCreated", payload)
+        self._emit_material_requirements(order.product_id, order.qty, order.order_id, "order")
+        if self.config.get("forecast_enabled", False):
+            self._demand_history.append((self.current_time.date(), order.product_id, order.qty))
         self.check_inventory(order)
 
     def check_inventory(self, order: SalesOrder) -> None:
@@ -947,17 +1126,35 @@ class WorldEngine:
         if stock >= order.qty:
             # Full fulfillment
             self.inventory[order.product_id]["qty_on_hand"] = stock - order.qty
-            self._log_event(
-                "ShipmentCreated",
-                {
-                    "order_id": order.order_id,
-                    "customer_id": order.customer_id,
-                    "product_id": order.product_id,
-                    "qty": order.qty,
-                    "qty_ordered": order.qty,
-                    "fulfillment_type": "full",
-                    "remaining_stock": self.inventory[order.product_id]["qty_on_hand"],
-                },
+            job_id = self._allocated_job_for_fulfillment(order.product_id, order.qty)
+            unit_price = self.config.get("default_unit_price", 1250.0)
+            amount = round(unit_price * order.qty, 2)
+            payload = {
+                "order_id": order.order_id,
+                "customer_id": order.customer_id,
+                "product_id": order.product_id,
+                "qty": order.qty,
+                "qty_ordered": order.qty,
+                "fulfillment_type": "full",
+                "remaining_stock": self.inventory[order.product_id]["qty_on_hand"],
+                "allocation_source": "production_job" if job_id else "on_hand",
+                "unit_price": unit_price,
+                "amount": amount,
+            }
+            if job_id:
+                payload["allocated_from_production_job_id"] = job_id
+            self._log_event("ShipmentCreated", payload)
+            self._create_invoice(
+                order_id=order.order_id,
+                customer_id=order.customer_id,
+                product_id=order.product_id,
+                qty=order.qty,
+            )
+            self._create_load_and_schedule_delivery(
+                order_id=order.order_id,
+                customer_id=order.customer_id,
+                product_id=order.product_id,
+                qty=order.qty,
             )
             return
         
@@ -968,19 +1165,36 @@ class WorldEngine:
             
             self.inventory[order.product_id]["qty_on_hand"] = 0
             
-            self._log_event(
-                "PartialShipmentCreated",
-                {
-                    "order_id": order.order_id,
-                    "customer_id": order.customer_id,
-                    "product_id": order.product_id,
-                    "qty_shipped": qty_shipped,
-                    "qty_backordered": qty_backordered,
-                    "qty_ordered": order.qty,
-                    "remaining_stock": 0,
-                },
+            job_id = self._allocated_job_for_fulfillment(order.product_id, qty_shipped)
+            unit_price = self.config.get("default_unit_price", 1250.0)
+            amount = round(unit_price * qty_shipped, 2)
+            payload = {
+                "order_id": order.order_id,
+                "customer_id": order.customer_id,
+                "product_id": order.product_id,
+                "qty_shipped": qty_shipped,
+                "qty_backordered": qty_backordered,
+                "qty_ordered": order.qty,
+                "remaining_stock": 0,
+                "allocation_source": "production_job" if job_id else "on_hand",
+                "unit_price": unit_price,
+                "amount": amount,
+            }
+            if job_id:
+                payload["allocated_from_production_job_id"] = job_id
+            self._log_event("PartialShipmentCreated", payload)
+            self._create_invoice(
+                order_id=order.order_id,
+                customer_id=order.customer_id,
+                product_id=order.product_id,
+                qty=qty_shipped,
             )
-            
+            self._create_load_and_schedule_delivery(
+                order_id=order.order_id,
+                customer_id=order.customer_id,
+                product_id=order.product_id,
+                qty=qty_shipped,
+            )
             # Create backorder for remaining
             self._create_backorder(order, qty_backordered)
         else:
@@ -1013,6 +1227,380 @@ class WorldEngine:
             created_at=self.current_time,
         )
         self._pending_backorders.append(backorder)
+
+    def _get_plant_facility_id(self) -> str:
+        """Return the facility_id of the SkyForge plant (first facility with type 'plant')."""
+        for f in self.facilities:
+            if isinstance(f, dict) and f.get("facility_type") == "plant":
+                return f.get("facility_id", "skyforge_plant")
+        return "skyforge_plant"
+
+    def _facility_location_code(self, facility_id: str) -> str | None:
+        """Return location_code for the facility, or None if not found."""
+        for f in self.facilities:
+            if isinstance(f, dict) and f.get("facility_id") == facility_id:
+                return f.get("location_code")
+        return None
+
+    def _get_route_outbound(self, origin_facility_id: str, destination_facility_id: str) -> dict[str, Any] | None:
+        """Look up outbound route by origin and destination location_code (CODE -> CODE)."""
+        origin_code = self._facility_location_code(origin_facility_id)
+        dest_code = self._facility_location_code(destination_facility_id)
+        if not origin_code or not dest_code:
+            return None
+        for r in self.routes_outbound:
+            if isinstance(r, dict) and r.get("origin_location_code") == origin_code and r.get("destination_location_code") == dest_code:
+                return r
+        return None
+
+    def _get_route_inbound(self, origin_facility_id: str, destination_country: str) -> dict[str, Any] | None:
+        """Look up inbound route by origin facility and destination country."""
+        for r in self.routes_inbound:
+            if isinstance(r, dict) and r.get("origin_facility_id") == origin_facility_id and r.get("destination_country") == destination_country:
+                return r
+        return None
+
+    def _create_load_and_schedule_delivery(
+        self,
+        *,
+        order_id: str,
+        customer_id: str,
+        product_id: str,
+        qty: int,
+    ) -> None:
+        """Create a load, emit LoadCreated, and schedule Pickup/Delivery events."""
+        if not self.config.get("delivery_enabled", True):
+            return
+        dest_facility_id = self._destination_facility_for_customer(customer_id)
+        if not dest_facility_id:
+            return
+        plant_id = self._get_plant_facility_id()
+        route = self._get_route_outbound(plant_id, dest_facility_id)
+        if not route:
+            return
+        load_id = str(uuid.uuid4())
+        route_id = route.get("route_id", load_id)
+        typical_transit_days = route.get("typical_transit_days", 3)
+        delay_hours = self.rng.randint(0, self.config.get("delivery_transit_delay_max_hours", 12))
+        scheduled_pickup = self.current_time
+        scheduled_delivery = self.current_time + timedelta(days=typical_transit_days, hours=delay_hours)
+        weight_lbs = qty * self.config.get("drone_x1_weight_lbs", 5.0)
+        pieces = qty * self.config.get("drone_x1_pieces_per_unit", 1)
+        distance_miles = route.get("typical_distance_miles", 0)
+        self._log_event(
+            "LoadCreated",
+            {
+                "load_id": load_id,
+                "order_id": order_id,
+                "customer_id": customer_id,
+                "route_id": route_id,
+                "product_id": product_id,
+                "qty": qty,
+                "weight_lbs": round(weight_lbs, 2),
+                "pieces": pieces,
+                "load_status": "dispatched",
+                "scheduled_pickup": iso_utc(scheduled_pickup),
+                "scheduled_delivery": iso_utc(scheduled_delivery),
+                "created_at": iso_utc(self.current_time),
+                "distance_miles": distance_miles,
+            },
+        )
+        self._pending_deliveries.append(
+            PendingDelivery(
+                load_id=load_id,
+                order_id=order_id,
+                customer_id=customer_id,
+                route_id=route_id,
+                product_id=product_id,
+                qty=qty,
+                weight_lbs=weight_lbs,
+                pieces=pieces,
+                scheduled_pickup=scheduled_pickup,
+                scheduled_delivery=scheduled_delivery,
+                origin_facility_id=plant_id,
+                destination_facility_id=dest_facility_id,
+            )
+        )
+
+    def _process_pending_deliveries(self) -> None:
+        """Emit DeliveryEvent (Pickup and Delivery) for loads whose delivery time has passed."""
+        if not self.config.get("delivery_enabled", True):
+            return
+        still_pending = []
+        grace_hours = 24
+        for pd in self._pending_deliveries:
+            if self.current_time < pd.scheduled_delivery:
+                still_pending.append(pd)
+                continue
+            actual_delivery = pd.scheduled_delivery + timedelta(minutes=self.rng.randint(0, 120))
+            on_time = actual_delivery <= pd.scheduled_delivery + timedelta(hours=grace_hours)
+            self._log_event(
+                "DeliveryEvent",
+                {
+                    "event_id": str(uuid.uuid4()),
+                    "load_id": pd.load_id,
+                    "event_type": "Pickup",
+                    "facility_id": pd.origin_facility_id,
+                    "scheduled_datetime": iso_utc(pd.scheduled_pickup),
+                    "actual_datetime": iso_utc(pd.scheduled_pickup),
+                    "detention_minutes": 0,
+                    "on_time_flag": True,
+                },
+            )
+            self._log_event(
+                "DeliveryEvent",
+                {
+                    "event_id": str(uuid.uuid4()),
+                    "load_id": pd.load_id,
+                    "event_type": "Delivery",
+                    "facility_id": pd.destination_facility_id,
+                    "scheduled_datetime": iso_utc(pd.scheduled_delivery),
+                    "actual_datetime": iso_utc(actual_delivery),
+                    "detention_minutes": 0,
+                    "on_time_flag": on_time,
+                },
+            )
+        self._pending_deliveries = still_pending
+
+    def _destination_facility_for_customer(self, customer_id: str) -> str | None:
+        """Return destination_facility_id for customer (every customer has one from generator)."""
+        customer = next((c for c in self.customers if isinstance(c, dict) and c.get("customer_id") == customer_id), None)
+        if not customer:
+            return None
+        return customer.get("destination_facility_id")
+
+    def _emit_material_requirements(
+        self,
+        product_id: str,
+        order_qty: int,
+        order_id: str,
+        source: str,
+    ) -> None:
+        """Emit MaterialRequirementCreated for each BOM component (demand explosion)."""
+        lead_days = self.config.get("requirements_lead_time_days", 30)
+        required_by_date = self.current_time + timedelta(days=lead_days)
+        for comp in self._bom_components_for_product(product_id):
+            part_id = comp.get("component_id")
+            qty_per = comp.get("qty", 0)
+            if not part_id:
+                continue
+            required_qty = order_qty * qty_per
+            if required_qty <= 0:
+                continue
+            self._log_event(
+                "MaterialRequirementCreated",
+                {
+                    "requirement_id": str(uuid.uuid4()),
+                    "product_id": product_id,
+                    "part_id": part_id,
+                    "required_qty": required_qty,
+                    "required_by_date": required_by_date.date().isoformat(),
+                    "source": source,
+                    "order_id": order_id,
+                },
+            )
+
+    def _allocated_job_for_fulfillment(self, product_id: str, qty: int) -> str | None:
+        """Pop up to qty from finished-good source queue; return job_id if any was allocated."""
+        queue = self._finished_good_sources.setdefault(product_id, [])
+        if not queue or qty <= 0:
+            return None
+        remaining = qty
+        job_id_used: str | None = None
+        new_queue: list[tuple[str, int]] = []
+        for job_id, available in queue:
+            if remaining <= 0:
+                new_queue.append((job_id, available))
+                continue
+            take = min(available, remaining)
+            if job_id_used is None:
+                job_id_used = job_id
+            remaining -= take
+            left = available - take
+            if left > 0:
+                new_queue.append((job_id, left))
+        self._finished_good_sources[product_id] = new_queue
+        return job_id_used
+
+    def _create_invoice(
+        self,
+        *,
+        order_id: str,
+        customer_id: str,
+        product_id: str,
+        qty: int,
+        amount: float | None = None,
+        currency: str = "USD",
+    ) -> None:
+        """Create an invoice for a shipment and append to pending invoices."""
+        if not self.config.get("invoice_enabled", True):
+            return
+        unit_price = self.config.get("default_unit_price", 1250.0)
+        if amount is None:
+            amount = round(unit_price * qty, 2)
+        days_min = self.config.get("invoice_payment_days_min", 14)
+        days_max = self.config.get("invoice_payment_days_max", 30)
+        payment_days = self.rng.randint(days_min, days_max)
+        due_date = self.current_time + timedelta(days=payment_days)
+        invoice_id = str(uuid.uuid4())
+        self._log_event(
+            "InvoiceCreated",
+            {
+                "invoice_id": invoice_id,
+                "order_id": order_id,
+                "customer_id": customer_id,
+                "product_id": product_id,
+                "qty": qty,
+                "amount": amount,
+                "currency": currency,
+                "due_date": iso_utc(due_date),
+                "timestamp": iso_utc(self.current_time),
+            },
+        )
+        self._pending_invoices.append(
+            PendingInvoice(
+                invoice_id=invoice_id,
+                order_id=order_id,
+                customer_id=customer_id,
+                product_id=product_id,
+                qty=qty,
+                amount=amount,
+                currency=currency,
+                due_date=due_date,
+            )
+        )
+
+    def _process_pending_invoices(self) -> None:
+        """Process due invoices: emit PaymentReceived with optional late payment."""
+        if not self.config.get("invoice_enabled", True):
+            return
+        still_pending = []
+        late_prob = self.config.get("payment_late_probability", 0.1)
+        late_days = self.config.get("payment_late_days_extra", 5)
+        for inv in self._pending_invoices:
+            if self.current_time < inv.due_date:
+                still_pending.append(inv)
+                continue
+            # Due: with probability (1 - late_prob) pay on time; else pay late
+            is_late = self.rng.random() < late_prob
+            if is_late:
+                paid_at = inv.due_date + timedelta(days=late_days)
+                on_time = False
+            else:
+                paid_at = self.current_time
+                on_time = True
+            self._log_event(
+                "PaymentReceived",
+                {
+                    "invoice_id": inv.invoice_id,
+                    "order_id": inv.order_id,
+                    "amount": inv.amount,
+                    "paid_at": iso_utc(paid_at),
+                    "on_time": on_time,
+                },
+            )
+        self._pending_invoices = still_pending
+
+    def _emit_daily_forecast(self) -> None:
+        """Emit demand forecast once per simulation day (naive: rolling avg + seasonality)."""
+        if not self.config.get("forecast_enabled", False):
+            return
+        today = self.current_time.date()
+        if self._last_forecast_date == today:
+            return
+        self._last_forecast_date = today
+        window_days = self.config.get("forecast_window_days", 14)
+        horizon_days = self.config.get("forecast_horizon_days", 7)
+        cutoff = today - timedelta(days=window_days)
+        # Trim history to window and aggregate by product
+        recent = [(d, p, q) for d, p, q in self._demand_history if d >= cutoff]
+        self._demand_history = [(d, p, q) for d, p, q in self._demand_history if d >= cutoff]
+        if not recent:
+            return
+        days_in_window = max(1, (today - cutoff).days)
+        by_product: dict[str, int] = {}
+        for _d, product_id, qty in recent:
+            by_product[product_id] = by_product.get(product_id, 0) + qty
+        seasonal = self._get_demand_seasonality_factor()
+        for product_id, total_qty in by_product.items():
+            avg_daily = total_qty / days_in_window
+            forecast_qty = max(0, round(avg_daily * horizon_days * seasonal, 2))
+            self._last_forecast_by_product[product_id] = forecast_qty
+            self._log_event(
+                "DemandForecastCreated",
+                {
+                    "snapshot_date": today.isoformat(),
+                    "product_id": product_id,
+                    "forecast_qty": forecast_qty,
+                    "horizon_days": horizon_days,
+                    "forecast_date": (today + timedelta(days=horizon_days)).isoformat(),
+                },
+            )
+
+    def _emit_monthly_ctc(self) -> None:
+        """Emit cash-to-cash metrics snapshot once per month (for pipeline analytics)."""
+        today = self.current_time.date()
+        if today.day != 1:
+            return
+        prev_month = today.month - 1 if today.month > 1 else 12
+        prev_year = today.year if today.month > 1 else today.year - 1
+        period = (prev_year, prev_month)
+        if self._last_ctc_month == period:
+            return
+        self._last_ctc_month = period
+        period_start = date(prev_year, prev_month, 1)
+        if prev_month == 12:
+            period_end = date(prev_year, 12, 31)
+        else:
+            period_end = date(prev_year, prev_month + 1, 1) - timedelta(days=1)
+        self._log_event(
+            "CTCMetricsEmitted",
+            {
+                "period_start": period_start.isoformat(),
+                "period_end": period_end.isoformat(),
+                "avg_days_receivables": None,
+                "avg_days_payables": None,
+                "avg_days_inventory": None,
+            },
+        )
+
+    def _emit_sop_snapshot(self) -> None:
+        """Emit S&OP snapshot on first tick of each planning period (monthly or weekly)."""
+        if not self.config.get("sop_enabled", False):
+            return
+        today = self.current_time.date()
+        freq = self.config.get("sop_frequency", "monthly")
+        if freq == "monthly":
+            period = (today.year, today.month)
+        else:
+            # ISO week
+            period = (today.isocalendar().year, today.isocalendar().week)
+        if self._last_sop_period == period:
+            return
+        self._last_sop_period = period
+        jobs = self.production_schedule.get("active_jobs", [])
+        wip_by_product: dict[str, int] = {}
+        for job in jobs:
+            if job.get("status") == "WIP":
+                pid = job.get("product_id", "DRONE-X1")
+                wip_by_product[pid] = wip_by_product.get(pid, 0) + 1
+        product_ids = set(self.inventory.keys()) | set(wip_by_product.keys()) | set(self._last_forecast_by_product.keys())
+        for product_id in product_ids:
+            inv_data = self.inventory.get(product_id, {})
+            inventory_plan_qty = inv_data.get("qty_on_hand", 0)
+            supply_plan_qty = wip_by_product.get(product_id, 0)
+            demand_forecast_qty = self._last_forecast_by_product.get(product_id, 0)
+            self._log_event(
+                "SOPSnapshotCreated",
+                {
+                    "plan_date": today.isoformat(),
+                    "scenario": "baseline",
+                    "product_id": product_id,
+                    "demand_forecast_qty": demand_forecast_qty,
+                    "supply_plan_qty": supply_plan_qty,
+                    "inventory_plan_qty": inventory_plan_qty,
+                },
+            )
 
     def create_production_job(self, *, product_id: str) -> None:
         """Create a new production job for the specified product."""
@@ -1290,6 +1878,8 @@ class WorldEngine:
                 "new_qty_on_hand": self.inventory[product_id]["qty_on_hand"],
             },
         )
+        # Allocation: track this job as source for future shipments (FIFO)
+        self._finished_good_sources.setdefault(product_id, []).append((job["job_id"], 1))
 
     def _missing_parts_for_job(self, product_id: str) -> dict[str, float]:
         """

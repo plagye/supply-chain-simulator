@@ -17,13 +17,45 @@ REGION_WEIGHTS: list[tuple[str, float]] = [
     ("APAC", 0.25),
 ]
 
-REGION_LOCALES: dict[str, list[str]] = {
-    # North America
-    "NA": ["en_US", "en_CA"],
-    # Europe / Middle East / Africa
-    "EMEA": ["en_GB", "de_DE", "fr_FR", "it_IT", "es_ES", "nl_NL", "pl_PL", "tr_TR", "en_ZA", "ar_SA"],
-    # Asia-Pacific
-    "APAC": ["en_AU", "en_IN", "ja_JP", "ko_KR", "zh_CN", "zh_TW"],
+# Default destination facility and location_code per region (must match data/facilities.json)
+REGION_TO_DESTINATION_FACILITY: dict[str, str] = {
+    "NA": "dist_na_01",
+    "EMEA": "dist_emea_01",
+    "APAC": "dist_apac_01",
+}
+
+REGION_TO_DELIVERY_LOCATION_CODE: dict[str, str] = {
+    "NA": "USA_DET",
+    "EMEA": "NLD_RTM",
+    "APAC": "SGP_SIN",
+}
+
+# (locale, country_name) with weight for weighted choice per region. Realistic addresses via Faker(locale).
+REGION_COUNTRY_OPTIONS: dict[str, list[tuple[str, str, float]]] = {
+    "NA": [
+        ("en_US", "USA", 0.85),
+        ("en_CA", "Canada", 0.15),
+    ],
+    "EMEA": [
+        ("de_DE", "Germany", 0.20),
+        ("en_GB", "United Kingdom", 0.18),
+        ("nl_NL", "Netherlands", 0.15),
+        ("fr_FR", "France", 0.14),
+        ("it_IT", "Italy", 0.10),
+        ("es_ES", "Spain", 0.08),
+        ("pl_PL", "Poland", 0.06),
+        ("en_ZA", "South Africa", 0.05),
+        ("tr_TR", "Turkey", 0.04),
+    ],
+    "APAC": [
+        ("en_AU", "Australia", 0.25),
+        ("ja_JP", "Japan", 0.22),
+        ("en_IN", "India", 0.18),
+        ("ko_KR", "South Korea", 0.12),
+        ("zh_CN", "China", 0.10),
+        ("zh_TW", "Taiwan", 0.08),
+        ("en_SG", "Singapore", 0.05),
+    ],
 }
 
 
@@ -108,23 +140,52 @@ def b2b_company_name(fake: Faker, rng: random.Random) -> str:
     return name
 
 
-def shipping_address(fake: Faker) -> str:
-    # Single-field address, compacted to one line for JSON consumers.
-    return fake.address().replace("\n", ", ")
+def weighted_choice_country(
+    region: str, rng: random.Random
+) -> tuple[str, str]:
+    """Return (locale, country_name) for the given region with weighted random choice."""
+    options = REGION_COUNTRY_OPTIONS.get(region, [("en_US", "USA", 1.0)])
+    locales = [o[0] for o in options]
+    countries = [o[1] for o in options]
+    weights = [o[2] for o in options]
+    idx = rng.choices(range(len(options)), weights=weights, k=1)[0]
+    return locales[idx], countries[idx]
 
 
-def shipping_address_for_region(*, region: str, rng: random.Random, seed: int | None, customer_index: int) -> str:
-    locales = REGION_LOCALES.get(region, ["en_US"])
-    locale = rng.choice(locales)
+def structured_address_for_locale(
+    locale: str, country_name: str, rng: random.Random, seed: int | None, customer_index: int
+) -> dict:
+    """Generate street, city, state, postal_code, country using Faker(locale)."""
     try:
-        addr_fake = Faker(locale)
-    except AttributeError:
-        # Locale not available in this Faker build; fall back to a safe default.
-        addr_fake = Faker("en_US")
+        fake = Faker(locale)
+    except (AttributeError, TypeError):
+        fake = Faker("en_US")
     if seed is not None:
-        # Use a stable per-customer seed to keep output reproducible even with multiple Faker instances.
-        addr_fake.seed_instance(seed + (customer_index + 1) * 101)
-    return shipping_address(addr_fake)
+        fake.seed_instance(seed + (customer_index + 1) * 101)
+    street = fake.street_address()
+    city = fake.city()
+    try:
+        state = fake.state() if locale in ("en_US", "en_CA", "en_AU") else ""
+    except Exception:
+        state = ""
+    postal_code = fake.postcode()
+    return {
+        "street": street,
+        "city": city,
+        "state": state,
+        "postal_code": postal_code,
+        "country": country_name,
+    }
+
+
+def format_shipping_address_line(addr: dict) -> str:
+    """Single line derived from structured address (for convenience)."""
+    parts = [addr["street"], addr["city"]]
+    if addr.get("state"):
+        parts.append(addr["state"])
+    parts.append(addr["postal_code"])
+    parts.append(addr["country"])
+    return ", ".join(str(p) for p in parts if p)
 
 
 def tier1_penalty_clauses(rng: random.Random) -> dict:
@@ -164,18 +225,30 @@ def generate_customers(count: int = 15, seed: int | None = 42) -> list[dict]:
     for i in range(count):
         is_tier1 = i < tier1_count
         region = weighted_choice(rng, REGION_WEIGHTS)
+        locale, country_name = weighted_choice_country(region, rng)
+        addr = structured_address_for_locale(locale, country_name, rng, seed, i)
 
         if is_tier1 and gov_names and rng.random() < 0.70:
             company_name = gov_names.pop()
         else:
             company_name = b2b_company_name(fake, rng)
 
+        destination_facility_id = REGION_TO_DESTINATION_FACILITY.get(region, "dist_na_01")
+        delivery_location_code = REGION_TO_DELIVERY_LOCATION_CODE.get(region, "USA_DET")
+
         customer = {
             "customer_id": str(uuid.uuid4()),
             "company_name": company_name,
             "region": region,
+            "country": addr["country"],
+            "street": addr["street"],
+            "city": addr["city"],
+            "state": addr["state"],
+            "postal_code": addr["postal_code"],
+            "shipping_address": format_shipping_address_line(addr),
+            "destination_facility_id": destination_facility_id,
+            "delivery_location_code": delivery_location_code,
             "contract_priority": "Tier 1" if is_tier1 else "Tier 2",
-            "shipping_address": shipping_address_for_region(region=region, rng=rng, seed=seed, customer_index=i),
         }
 
         if is_tier1:
