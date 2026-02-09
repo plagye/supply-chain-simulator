@@ -1,4 +1,4 @@
-"""Generate routes.json with inbound and outbound routes keyed by location_code (CODE -> CODE)."""
+"""Generate routes.json: code-based outbound (origin_location_code -> destination_location_code) and inbound (destination_country)."""
 from __future__ import annotations
 
 import argparse
@@ -8,21 +8,20 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 
-PLANT_FACILITY_ID = "skyforge_plant"
+PLANT_FACILITY_ID = "FAC-001"
 PLANT_LOCATION_CODE = "USA_CHI"
 
+# Outbound: plant (USA_CHI) to each delivery facility. CODE -> CODE.
 OUTBOUND_ROUTES = [
     {"destination_facility_id": "dist_na_01", "destination_location_code": "USA_DET", "typical_distance_miles": 283, "typical_transit_days": 2, "base_rate_per_mile": 0.12},
     {"destination_facility_id": "dist_na_02", "destination_location_code": "USA_DAL", "typical_distance_miles": 967, "typical_transit_days": 3, "base_rate_per_mile": 0.12},
     {"destination_facility_id": "dist_emea_01", "destination_location_code": "NLD_RTM", "typical_distance_miles": 4100, "typical_transit_days": 12, "base_rate_per_mile": 0.18},
-    {"destination_facility_id": "dist_emea_02", "destination_location_code": "DEU_FRA", "typical_distance_miles": 4400, "typical_transit_days": 14, "base_rate_per_mile": 0.18},
     {"destination_facility_id": "dist_apac_01", "destination_location_code": "SGP_SIN", "typical_distance_miles": 9300, "typical_transit_days": 21, "base_rate_per_mile": 0.15},
-    {"destination_facility_id": "dist_apac_02", "destination_location_code": "AUS_SYD", "typical_distance_miles": 9400, "typical_transit_days": 22, "base_rate_per_mile": 0.15},
 ]
 
+# Inbound: supplier country to plant. Engine matches on destination_country.
 INBOUND_ROUTES = [
     {"destination_country": "China", "typical_distance_miles": 7200, "typical_transit_days": 28, "base_rate_per_mile": 0.15},
-    {"destination_country": "Taiwan", "typical_distance_miles": 7600, "typical_transit_days": 26, "base_rate_per_mile": 0.15},
     {"destination_country": "Germany", "typical_distance_miles": 4400, "typical_transit_days": 14, "base_rate_per_mile": 0.18},
     {"destination_country": "USA", "typical_distance_miles": 800, "typical_transit_days": 3, "base_rate_per_mile": 0.12},
 ]
@@ -30,12 +29,7 @@ INBOUND_ROUTES = [
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate routes.json (CODE -> CODE).")
-    parser.add_argument(
-        "--out",
-        type=Path,
-        default=DATA_DIR / "routes.json",
-        help="Output path (default: data/routes.json)",
-    )
+    parser.add_argument("--out", type=Path, default=DATA_DIR / "routes.json", help="Output path (default: data/routes.json)")
     args = parser.parse_args()
 
     outbound = []

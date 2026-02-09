@@ -1,7 +1,7 @@
 [
   {
-    "facility_id": "skyforge_plant",
-    "facility_name": "SkyForge Dynamics Chicago Plant",
+    "facility_id": "FAC-001",
+    "facility_name": "SkyForge HQ",
     "city": "Chicago",
     "state": "IL",
     "country": "USA",
@@ -11,7 +11,7 @@
   },
   {
     "facility_id": "dist_na_01",
-    "facility_name": "North America Distribution Center 1",
+    "facility_name": "NA DC Detroit",
     "city": "Detroit",
     "state": "MI",
     "country": "USA",
@@ -21,7 +21,7 @@
   },
   {
     "facility_id": "dist_na_02",
-    "facility_name": "North America Distribution Center 2",
+    "facility_name": "NA DC Dallas",
     "city": "Dallas",
     "state": "TX",
     "country": "USA",
@@ -31,7 +31,7 @@
   },
   {
     "facility_id": "dist_emea_01",
-    "facility_name": "EMEA Distribution Center",
+    "facility_name": "EMEA DC Rotterdam",
     "city": "Rotterdam",
     "state": "",
     "country": "Netherlands",
@@ -40,33 +40,13 @@
     "location_code": "NLD_RTM"
   },
   {
-    "facility_id": "dist_emea_02",
-    "facility_name": "EMEA Delivery Hub",
-    "city": "Frankfurt",
-    "state": "",
-    "country": "Germany",
-    "facility_type": "delivery",
-    "region": "EMEA",
-    "location_code": "DEU_FRA"
-  },
-  {
     "facility_id": "dist_apac_01",
-    "facility_name": "APAC Distribution Center",
+    "facility_name": "APAC DC Singapore",
     "city": "Singapore",
     "state": "",
     "country": "Singapore",
     "facility_type": "distribution",
     "region": "APAC",
     "location_code": "SGP_SIN"
-  },
-  {
-    "facility_id": "dist_apac_02",
-    "facility_name": "APAC Delivery Hub",
-    "city": "Sydney",
-    "state": "NSW",
-    "country": "Australia",
-    "facility_type": "delivery",
-    "region": "APAC",
-    "location_code": "AUS_SYD"
   }
 ]

@@ -2,7 +2,7 @@
   "inbound": [
     {
       "route_id": "in_USA_CHI_china",
-      "origin_facility_id": "skyforge_plant",
+      "origin_facility_id": "FAC-001",
       "origin_location_code": "USA_CHI",
       "destination_country": "China",
       "typical_distance_miles": 7200,
@@ -10,17 +10,8 @@
       "base_rate_per_mile": 0.15
     },
     {
-      "route_id": "in_USA_CHI_taiwan",
-      "origin_facility_id": "skyforge_plant",
-      "origin_location_code": "USA_CHI",
-      "destination_country": "Taiwan",
-      "typical_distance_miles": 7600,
-      "typical_transit_days": 26,
-      "base_rate_per_mile": 0.15
-    },
-    {
       "route_id": "in_USA_CHI_germany",
-      "origin_facility_id": "skyforge_plant",
+      "origin_facility_id": "FAC-001",
       "origin_location_code": "USA_CHI",
       "destination_country": "Germany",
       "typical_distance_miles": 4400,
@@ -29,7 +20,7 @@
     },
     {
       "route_id": "in_USA_CHI_usa",
-      "origin_facility_id": "skyforge_plant",
+      "origin_facility_id": "FAC-001",
       "origin_location_code": "USA_CHI",
       "destination_country": "USA",
       "typical_distance_miles": 800,
@@ -40,7 +31,7 @@
   "outbound": [
     {
       "route_id": "out_USA_CHI_USA_DET",
-      "origin_facility_id": "skyforge_plant",
+      "origin_facility_id": "FAC-001",
       "destination_facility_id": "dist_na_01",
       "origin_location_code": "USA_CHI",
       "destination_location_code": "USA_DET",
@@ -50,7 +41,7 @@
     },
     {
       "route_id": "out_USA_CHI_USA_DAL",
-      "origin_facility_id": "skyforge_plant",
+      "origin_facility_id": "FAC-001",
       "destination_facility_id": "dist_na_02",
       "origin_location_code": "USA_CHI",
       "destination_location_code": "USA_DAL",
@@ -60,7 +51,7 @@
     },
     {
       "route_id": "out_USA_CHI_NLD_RTM",
-      "origin_facility_id": "skyforge_plant",
+      "origin_facility_id": "FAC-001",
       "destination_facility_id": "dist_emea_01",
       "origin_location_code": "USA_CHI",
       "destination_location_code": "NLD_RTM",
@@ -69,33 +60,13 @@
       "base_rate_per_mile": 0.18
     },
     {
-      "route_id": "out_USA_CHI_DEU_FRA",
-      "origin_facility_id": "skyforge_plant",
-      "destination_facility_id": "dist_emea_02",
-      "origin_location_code": "USA_CHI",
-      "destination_location_code": "DEU_FRA",
-      "typical_distance_miles": 4400,
-      "typical_transit_days": 14,
-      "base_rate_per_mile": 0.18
-    },
-    {
       "route_id": "out_USA_CHI_SGP_SIN",
-      "origin_facility_id": "skyforge_plant",
+      "origin_facility_id": "FAC-001",
       "destination_facility_id": "dist_apac_01",
       "origin_location_code": "USA_CHI",
       "destination_location_code": "SGP_SIN",
       "typical_distance_miles": 9300,
       "typical_transit_days": 21,
-      "base_rate_per_mile": 0.15
-    },
-    {
-      "route_id": "out_USA_CHI_AUS_SYD",
-      "origin_facility_id": "skyforge_plant",
-      "destination_facility_id": "dist_apac_02",
-      "origin_location_code": "USA_CHI",
-      "destination_location_code": "AUS_SYD",
-      "typical_distance_miles": 9400,
-      "typical_transit_days": 22,
       "base_rate_per_mile": 0.15
     }
   ]

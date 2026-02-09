@@ -1,0 +1,12 @@
+[
+  {"product_id": "D-101", "name": "Sparrow-S1", "type": "Scout", "key_features": "Light Frame, Std Motor"},
+  {"product_id": "D-102", "name": "Sparrow-Pro", "type": "Scout", "key_features": "Light Frame, Pro Motor, GPS"},
+  {"product_id": "D-103", "name": "Falcon-X", "type": "Racing", "key_features": "Light Frame, Pro Motor, 10Ah Batt"},
+  {"product_id": "D-201", "name": "Courier-M", "type": "Delivery", "key_features": "Heavy Frame, Std Motor, Payload Mnt"},
+  {"product_id": "D-202", "name": "Courier-L", "type": "Delivery", "key_features": "Heavy Frame, 6x Std Motor, 2x Batt"},
+  {"product_id": "D-203", "name": "Surveyor-300", "type": "Inspection", "key_features": "Light Frame, GPS, Payload Mnt"},
+  {"product_id": "D-204", "name": "Surveyor-500", "type": "Inspection", "key_features": "Heavy Frame, Pro Motor, 2x GPS"},
+  {"product_id": "D-301", "name": "Titan-Hauler", "type": "Heavy Lift", "key_features": "Heavy Frame, 8x Pro Motor, 2x Batt"},
+  {"product_id": "D-302", "name": "Agri-Sprayer", "type": "Agriculture", "key_features": "Heavy Frame, 6x Pro Motor, 2x Batt"},
+  {"product_id": "D-303", "name": "Sky-Crane", "type": "Construction", "key_features": "Heavy Frame, 8x Pro Motor, 3x Batt"}
+]

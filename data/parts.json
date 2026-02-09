@@ -1,634 +1,102 @@
 [
   {
-    "part_id": "SKU-100",
-    "name": "Li-Ion Battery Cell (21700)",
-    "category": "Electronics",
-    "standard_cost": 3.38,
+    "part_id": "P-001",
+    "name": "Frame-Light (Composite)",
+    "category": "Chassis",
+    "standard_cost": 50.0,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "0c7d59c7-4481-45cd-8947-e80c7b3c5cff",
-      "11377984-a1aa-4585-9904-5f9468666d49"
+      "SUP-002"
     ]
   },
   {
-    "part_id": "SKU-101",
-    "name": "Battery Management IC",
-    "category": "Electronics",
-    "standard_cost": 3.34,
+    "part_id": "P-002",
+    "name": "Frame-Heavy (Alloy)",
+    "category": "Chassis",
+    "standard_cost": 120.0,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "04b9bf52-9f54-4686-81b0-2a5bd30c9f56",
-      "11377984-a1aa-4585-9904-5f9468666d49",
-      "eb8bf817-ea5c-4f2b-8cb0-b9987fe7ab12"
+      "SUP-002"
     ]
   },
   {
-    "part_id": "SKU-102",
-    "name": "Microcontroller (32-bit)",
-    "category": "Electronics",
-    "standard_cost": 3.48,
+    "part_id": "P-003",
+    "name": "Motor-Std (800KV)",
+    "category": "Propulsion",
+    "standard_cost": 25.0,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "0c7d59c7-4481-45cd-8947-e80c7b3c5cff",
-      "18ec6d81-8939-4500-8640-7b91b7d1a2b9",
-      "40393509-c40a-47b4-b7e2-073712a2fdde",
-      "5e2fc643-7503-40fd-9f3c-e99ff8ddeb45",
-      "f2e01ff1-f3e3-42d8-97bb-527f9be92729",
-      "f75055e9-5e31-4795-8b75-7c7b52eaa9e2"
+      "SUP-001"
     ]
   },
   {
-    "part_id": "SKU-103",
-    "name": "Power MOSFET (60V)",
-    "category": "Electronics",
-    "standard_cost": 1.66,
+    "part_id": "P-004",
+    "name": "Motor-Pro (1200KV)",
+    "category": "Propulsion",
+    "standard_cost": 45.0,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "0c7d59c7-4481-45cd-8947-e80c7b3c5cff",
-      "84920a05-62ee-4528-a1a6-85df1f62e286",
-      "cee40f83-f16f-44f6-907a-17a11e161dfb",
-      "ec124747-ba5a-4a00-8c74-8b3ce6642e34",
-      "f610ec86-8e7f-4f8c-8a60-f6ff498b6f3d",
-      "fb7ce668-6d54-487b-a033-6388049c0dec"
+      "SUP-001"
     ]
   },
   {
-    "part_id": "SKU-104",
-    "name": "DC-DC Converter Module",
-    "category": "Electronics",
-    "standard_cost": 7.15,
+    "part_id": "P-005",
+    "name": "Propeller-Set (Generic)",
+    "category": "Propulsion",
+    "standard_cost": 10.0,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "0a497567-adbf-440d-a04d-a77664c5890a",
-      "5e2fc643-7503-40fd-9f3c-e99ff8ddeb45",
-      "7f603748-2b62-4e92-b6db-5768952fd7ff",
-      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
-      "f6aaa254-dcc3-4927-9ba3-7c870cf00f21"
+      "SUP-002"
     ]
   },
   {
-    "part_id": "SKU-105",
-    "name": "Temperature Sensor (NTC)",
-    "category": "Electronics",
-    "standard_cost": 0.16,
+    "part_id": "P-006",
+    "name": "Battery-5Ah (LiPo)",
+    "category": "Power",
+    "standard_cost": 60.0,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "40393509-c40a-47b4-b7e2-073712a2fdde",
-      "cee40f83-f16f-44f6-907a-17a11e161dfb",
-      "ef1ec63c-eca0-4c12-8e53-1a35012e3582"
+      "SUP-001"
     ]
   },
   {
-    "part_id": "SKU-106",
-    "name": "Hall Effect Sensor",
-    "category": "Electronics",
-    "standard_cost": 0.28,
+    "part_id": "P-007",
+    "name": "Battery-10Ah (LiPo)",
+    "category": "Power",
+    "standard_cost": 110.0,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
-      "eb8bf817-ea5c-4f2b-8cb0-b9987fe7ab12",
-      "ef1ec63c-eca0-4c12-8e53-1a35012e3582"
+      "SUP-001"
     ]
   },
   {
-    "part_id": "SKU-107",
-    "name": "CAN Transceiver",
-    "category": "Electronics",
-    "standard_cost": 0.88,
+    "part_id": "P-008",
+    "name": "Flight-Controller-V1",
+    "category": "Avionics",
+    "standard_cost": 80.0,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "5a2701cb-ea25-456b-82e8-0194e285c4d8",
-      "beded468-ac8c-4e81-b044-c861b94334cd"
+      "SUP-003"
     ]
   },
   {
-    "part_id": "SKU-108",
-    "name": "Ethernet PHY",
-    "category": "Electronics",
-    "standard_cost": 3.13,
+    "part_id": "P-009",
+    "name": "Nav-Module-GPS",
+    "category": "Avionics",
+    "standard_cost": 40.0,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "0a497567-adbf-440d-a04d-a77664c5890a",
-      "11377984-a1aa-4585-9904-5f9468666d49",
-      "f2e01ff1-f3e3-42d8-97bb-527f9be92729",
-      "f6aaa254-dcc3-4927-9ba3-7c870cf00f21"
+      "SUP-003"
     ]
   },
   {
-    "part_id": "SKU-109",
-    "name": "Wi‑Fi Module",
-    "category": "Electronics",
-    "standard_cost": 6.33,
+    "part_id": "P-010",
+    "name": "Payload-Interface",
+    "category": "Accessories",
+    "standard_cost": 30.0,
     "unit_of_measure": "pcs",
     "valid_supplier_ids": [
-      "84920a05-62ee-4528-a1a6-85df1f62e286",
-      "ec124747-ba5a-4a00-8c74-8b3ce6642e34",
-      "ec6c04d6-ecb4-43d7-8905-e3f4463f1273",
-      "f75055e9-5e31-4795-8b75-7c7b52eaa9e2",
-      "fc42fe54-0c9d-4d17-a56d-a8c042867ea6"
-    ]
-  },
-  {
-    "part_id": "SKU-110",
-    "name": "GNSS Receiver Module",
-    "category": "Electronics",
-    "standard_cost": 4.07,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "5e2fc643-7503-40fd-9f3c-e99ff8ddeb45",
-      "cee40f83-f16f-44f6-907a-17a11e161dfb",
-      "f75055e9-5e31-4795-8b75-7c7b52eaa9e2",
-      "fb7ce668-6d54-487b-a033-6388049c0dec"
-    ]
-  },
-  {
-    "part_id": "SKU-111",
-    "name": "OLED Status Display (0.96\")",
-    "category": "Electronics",
-    "standard_cost": 5.28,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
-      "ec6c04d6-ecb4-43d7-8905-e3f4463f1273",
-      "f75055e9-5e31-4795-8b75-7c7b52eaa9e2"
-    ]
-  },
-  {
-    "part_id": "SKU-112",
-    "name": "Tactile Switch (SMD)",
-    "category": "Electronics",
-    "standard_cost": 0.08,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "7f603748-2b62-4e92-b6db-5768952fd7ff",
-      "cbfa957a-9561-4870-b6ae-1a26fa3d2df9"
-    ]
-  },
-  {
-    "part_id": "SKU-113",
-    "name": "LED Indicator (Green)",
-    "category": "Electronics",
-    "standard_cost": 0.03,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "5a2701cb-ea25-456b-82e8-0194e285c4d8",
-      "70991141-f9e2-44d7-b91d-8876abd7069e",
-      "f170e41e-4981-456b-974e-2fa0c8bcb6fb",
-      "fb7ce668-6d54-487b-a033-6388049c0dec"
-    ]
-  },
-  {
-    "part_id": "SKU-114",
-    "name": "Connector (XT60)",
-    "category": "Electronics",
-    "standard_cost": 0.53,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "84920a05-62ee-4528-a1a6-85df1f62e286",
-      "f610ec86-8e7f-4f8c-8a60-f6ff498b6f3d"
-    ]
-  },
-  {
-    "part_id": "SKU-115",
-    "name": "PCB (4-layer, 100x100)",
-    "category": "Electronics",
-    "standard_cost": 3.39,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "0a497567-adbf-440d-a04d-a77664c5890a",
-      "cbfa957a-9561-4870-b6ae-1a26fa3d2df9",
-      "f170e41e-4981-456b-974e-2fa0c8bcb6fb"
-    ]
-  },
-  {
-    "part_id": "SKU-116",
-    "name": "ESD Protection Diode Array",
-    "category": "Electronics",
-    "standard_cost": 0.07,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "70991141-f9e2-44d7-b91d-8876abd7069e",
-      "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
-      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
-      "ef1ec63c-eca0-4c12-8e53-1a35012e3582",
-      "f6aaa254-dcc3-4927-9ba3-7c870cf00f21",
-      "fc42fe54-0c9d-4d17-a56d-a8c042867ea6"
-    ]
-  },
-  {
-    "part_id": "SKU-117",
-    "name": "Ceramic Capacitor 10uF",
-    "category": "Electronics",
-    "standard_cost": 0.05,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "ef1ec63c-eca0-4c12-8e53-1a35012e3582",
-      "f6aaa254-dcc3-4927-9ba3-7c870cf00f21"
-    ]
-  },
-  {
-    "part_id": "SKU-118",
-    "name": "Shunt Resistor 1mΩ",
-    "category": "Electronics",
-    "standard_cost": 0.67,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "18ec6d81-8939-4500-8640-7b91b7d1a2b9",
-      "fb7ce668-6d54-487b-a033-6388049c0dec"
-    ]
-  },
-  {
-    "part_id": "SKU-119",
-    "name": "Quartz Crystal 16MHz",
-    "category": "Electronics",
-    "standard_cost": 0.36,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "84920a05-62ee-4528-a1a6-85df1f62e286",
-      "a5fec7eb-c90b-4c98-842a-e273a824de96",
-      "cbfa957a-9561-4870-b6ae-1a26fa3d2df9",
-      "fb7ce668-6d54-487b-a033-6388049c0dec"
-    ]
-  },
-  {
-    "part_id": "SKU-120",
-    "name": "Carbon Fiber Sheet (2mm)",
-    "category": "Raw Material",
-    "standard_cost": 43.33,
-    "unit_of_measure": "m",
-    "valid_supplier_ids": [
-      "04b9bf52-9f54-4686-81b0-2a5bd30c9f56",
-      "11377984-a1aa-4585-9904-5f9468666d49",
-      "7f603748-2b62-4e92-b6db-5768952fd7ff",
-      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
-      "ec124747-ba5a-4a00-8c74-8b3ce6642e34"
-    ]
-  },
-  {
-    "part_id": "SKU-121",
-    "name": "Aluminum Extrusion 6061-T6",
-    "category": "Raw Material",
-    "standard_cost": 17.96,
-    "unit_of_measure": "m",
-    "valid_supplier_ids": [
-      "40393509-c40a-47b4-b7e2-073712a2fdde",
-      "5a2701cb-ea25-456b-82e8-0194e285c4d8",
-      "5e2fc643-7503-40fd-9f3c-e99ff8ddeb45",
-      "c9a681f8-403d-42b8-958c-60f507e5cd59",
-      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
-      "cbfa957a-9561-4870-b6ae-1a26fa3d2df9"
-    ]
-  },
-  {
-    "part_id": "SKU-122",
-    "name": "Copper Wire (AWG 14)",
-    "category": "Raw Material",
-    "standard_cost": 1.22,
-    "unit_of_measure": "m",
-    "valid_supplier_ids": [
-      "7864feb7-c35e-4178-8a65-b6bf094d5963",
-      "a5fec7eb-c90b-4c98-842a-e273a824de96",
-      "f75055e9-5e31-4795-8b75-7c7b52eaa9e2"
-    ]
-  },
-  {
-    "part_id": "SKU-123",
-    "name": "Stainless Steel Rod (304)",
-    "category": "Raw Material",
-    "standard_cost": 4.76,
-    "unit_of_measure": "m",
-    "valid_supplier_ids": [
-      "04b9bf52-9f54-4686-81b0-2a5bd30c9f56",
-      "84920a05-62ee-4528-a1a6-85df1f62e286"
-    ]
-  },
-  {
-    "part_id": "SKU-124",
-    "name": "ABS Plastic Pellets",
-    "category": "Raw Material",
-    "standard_cost": 1.7,
-    "unit_of_measure": "kg",
-    "valid_supplier_ids": [
-      "0a497567-adbf-440d-a04d-a77664c5890a",
-      "7864feb7-c35e-4178-8a65-b6bf094d5963",
-      "cbfa957a-9561-4870-b6ae-1a26fa3d2df9",
-      "f610ec86-8e7f-4f8c-8a60-f6ff498b6f3d",
-      "f75055e9-5e31-4795-8b75-7c7b52eaa9e2"
-    ]
-  },
-  {
-    "part_id": "SKU-125",
-    "name": "Polycarbonate Pellets",
-    "category": "Raw Material",
-    "standard_cost": 4.45,
-    "unit_of_measure": "kg",
-    "valid_supplier_ids": [
-      "0c7d59c7-4481-45cd-8947-e80c7b3c5cff",
-      "11377984-a1aa-4585-9904-5f9468666d49",
-      "18ec6d81-8939-4500-8640-7b91b7d1a2b9",
-      "70991141-f9e2-44d7-b91d-8876abd7069e",
-      "beded468-ac8c-4e81-b044-c861b94334cd",
-      "eb8bf817-ea5c-4f2b-8cb0-b9987fe7ab12"
-    ]
-  },
-  {
-    "part_id": "SKU-126",
-    "name": "Epoxy Resin",
-    "category": "Raw Material",
-    "standard_cost": 9.52,
-    "unit_of_measure": "kg",
-    "valid_supplier_ids": [
-      "84920a05-62ee-4528-a1a6-85df1f62e286",
-      "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
-      "eb8bf817-ea5c-4f2b-8cb0-b9987fe7ab12",
-      "ef1ec63c-eca0-4c12-8e53-1a35012e3582"
-    ]
-  },
-  {
-    "part_id": "SKU-127",
-    "name": "Silicone Sealant",
-    "category": "Raw Material",
-    "standard_cost": 12.76,
-    "unit_of_measure": "kg",
-    "valid_supplier_ids": [
-      "0a497567-adbf-440d-a04d-a77664c5890a",
-      "0c7d59c7-4481-45cd-8947-e80c7b3c5cff",
-      "11377984-a1aa-4585-9904-5f9468666d49"
-    ]
-  },
-  {
-    "part_id": "SKU-128",
-    "name": "Nitrile Rubber Sheet",
-    "category": "Raw Material",
-    "standard_cost": 3.3,
-    "unit_of_measure": "m",
-    "valid_supplier_ids": [
-      "18ec6d81-8939-4500-8640-7b91b7d1a2b9",
-      "7864feb7-c35e-4178-8a65-b6bf094d5963",
-      "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
-      "f170e41e-4981-456b-974e-2fa0c8bcb6fb"
-    ]
-  },
-  {
-    "part_id": "SKU-129",
-    "name": "Steel Sheet (Cold Rolled)",
-    "category": "Raw Material",
-    "standard_cost": 1.16,
-    "unit_of_measure": "kg",
-    "valid_supplier_ids": [
-      "7864feb7-c35e-4178-8a65-b6bf094d5963",
-      "84920a05-62ee-4528-a1a6-85df1f62e286",
-      "f610ec86-8e7f-4f8c-8a60-f6ff498b6f3d",
-      "fc42fe54-0c9d-4d17-a56d-a8c042867ea6"
-    ]
-  },
-  {
-    "part_id": "SKU-130",
-    "name": "Aluminum Sheet (5052)",
-    "category": "Raw Material",
-    "standard_cost": 3.95,
-    "unit_of_measure": "kg",
-    "valid_supplier_ids": [
-      "18ec6d81-8939-4500-8640-7b91b7d1a2b9",
-      "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
-      "ec124747-ba5a-4a00-8c74-8b3ce6642e34",
-      "f170e41e-4981-456b-974e-2fa0c8bcb6fb"
-    ]
-  },
-  {
-    "part_id": "SKU-131",
-    "name": "Neodymium Magnet (Grade N52)",
-    "category": "Raw Material",
-    "standard_cost": 76.76,
-    "unit_of_measure": "kg",
-    "valid_supplier_ids": [
-      "ef1ec63c-eca0-4c12-8e53-1a35012e3582",
-      "f610ec86-8e7f-4f8c-8a60-f6ff498b6f3d"
-    ]
-  },
-  {
-    "part_id": "SKU-132",
-    "name": "Lithium Carbonate",
-    "category": "Raw Material",
-    "standard_cost": 31.85,
-    "unit_of_measure": "kg",
-    "valid_supplier_ids": [
-      "18ec6d81-8939-4500-8640-7b91b7d1a2b9",
-      "5a2701cb-ea25-456b-82e8-0194e285c4d8"
-    ]
-  },
-  {
-    "part_id": "SKU-133",
-    "name": "Graphite Powder",
-    "category": "Raw Material",
-    "standard_cost": 11.52,
-    "unit_of_measure": "kg",
-    "valid_supplier_ids": [
-      "5e2fc643-7503-40fd-9f3c-e99ff8ddeb45",
-      "c9a681f8-403d-42b8-958c-60f507e5cd59",
-      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
-      "f2e01ff1-f3e3-42d8-97bb-527f9be92729"
-    ]
-  },
-  {
-    "part_id": "SKU-134",
-    "name": "Fiberglass Cloth",
-    "category": "Raw Material",
-    "standard_cost": 5.58,
-    "unit_of_measure": "m",
-    "valid_supplier_ids": [
-      "11377984-a1aa-4585-9904-5f9468666d49",
-      "a5fec7eb-c90b-4c98-842a-e273a824de96"
-    ]
-  },
-  {
-    "part_id": "SKU-135",
-    "name": "Heat Shrink Tubing",
-    "category": "Raw Material",
-    "standard_cost": 0.1,
-    "unit_of_measure": "m",
-    "valid_supplier_ids": [
-      "04b9bf52-9f54-4686-81b0-2a5bd30c9f56",
-      "70991141-f9e2-44d7-b91d-8876abd7069e",
-      "a5fec7eb-c90b-4c98-842a-e273a824de96",
-      "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
-      "c9a681f8-403d-42b8-958c-60f507e5cd59",
-      "ec124747-ba5a-4a00-8c74-8b3ce6642e34"
-    ]
-  },
-  {
-    "part_id": "SKU-136",
-    "name": "Industrial Adhesive Film",
-    "category": "Raw Material",
-    "standard_cost": 3.5,
-    "unit_of_measure": "m",
-    "valid_supplier_ids": [
-      "40393509-c40a-47b4-b7e2-073712a2fdde",
-      "beded468-ac8c-4e81-b044-c861b94334cd",
-      "c4bf970a-a1ea-4ca0-ba9c-7581fe19b09b",
-      "ec124747-ba5a-4a00-8c74-8b3ce6642e34",
-      "f610ec86-8e7f-4f8c-8a60-f6ff498b6f3d",
-      "fb7ce668-6d54-487b-a033-6388049c0dec"
-    ]
-  },
-  {
-    "part_id": "SKU-137",
-    "name": "Gearbox Assembly",
-    "category": "Assembly",
-    "standard_cost": 139.46,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "cbfa957a-9561-4870-b6ae-1a26fa3d2df9",
-      "cee40f83-f16f-44f6-907a-17a11e161dfb",
-      "ec6c04d6-ecb4-43d7-8905-e3f4463f1273"
-    ]
-  },
-  {
-    "part_id": "SKU-138",
-    "name": "Linear Actuator Assembly",
-    "category": "Assembly",
-    "standard_cost": 70.95,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "0a497567-adbf-440d-a04d-a77664c5890a",
-      "7864feb7-c35e-4178-8a65-b6bf094d5963",
-      "c9a681f8-403d-42b8-958c-60f507e5cd59",
-      "eb8bf817-ea5c-4f2b-8cb0-b9987fe7ab12"
-    ]
-  },
-  {
-    "part_id": "SKU-139",
-    "name": "Cooling Fan Assembly (120mm)",
-    "category": "Assembly",
-    "standard_cost": 8.09,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "0c7d59c7-4481-45cd-8947-e80c7b3c5cff",
-      "ef1ec63c-eca0-4c12-8e53-1a35012e3582"
-    ]
-  },
-  {
-    "part_id": "SKU-140",
-    "name": "Wiring Harness Assembly",
-    "category": "Assembly",
-    "standard_cost": 7.7,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "0c7d59c7-4481-45cd-8947-e80c7b3c5cff",
-      "5e2fc643-7503-40fd-9f3c-e99ff8ddeb45",
-      "cb96a579-bdd1-4460-a950-fa98ad9074e8"
-    ]
-  },
-  {
-    "part_id": "SKU-141",
-    "name": "Bearing Set (6204)",
-    "category": "Assembly",
-    "standard_cost": 5.55,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
-      "f75055e9-5e31-4795-8b75-7c7b52eaa9e2"
-    ]
-  },
-  {
-    "part_id": "SKU-142",
-    "name": "Fastener Kit (M3/M4)",
-    "category": "Assembly",
-    "standard_cost": 2.94,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "7864feb7-c35e-4178-8a65-b6bf094d5963",
-      "7f603748-2b62-4e92-b6db-5768952fd7ff",
-      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
-      "f75055e9-5e31-4795-8b75-7c7b52eaa9e2"
-    ]
-  },
-  {
-    "part_id": "SKU-143",
-    "name": "O‑Ring Kit (NBR)",
-    "category": "Assembly",
-    "standard_cost": 3.31,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "04b9bf52-9f54-4686-81b0-2a5bd30c9f56",
-      "11377984-a1aa-4585-9904-5f9468666d49",
-      "ec124747-ba5a-4a00-8c74-8b3ce6642e34"
-    ]
-  },
-  {
-    "part_id": "SKU-144",
-    "name": "Injection Molded Housing",
-    "category": "Assembly",
-    "standard_cost": 3.02,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "40393509-c40a-47b4-b7e2-073712a2fdde",
-      "5e2fc643-7503-40fd-9f3c-e99ff8ddeb45",
-      "a5fec7eb-c90b-4c98-842a-e273a824de96",
-      "c9a681f8-403d-42b8-958c-60f507e5cd59",
-      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
-      "f6aaa254-dcc3-4927-9ba3-7c870cf00f21"
-    ]
-  },
-  {
-    "part_id": "SKU-145",
-    "name": "Stamped Bracket",
-    "category": "Assembly",
-    "standard_cost": 1.14,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "40393509-c40a-47b4-b7e2-073712a2fdde",
-      "70991141-f9e2-44d7-b91d-8876abd7069e"
-    ]
-  },
-  {
-    "part_id": "SKU-146",
-    "name": "Motor Mount Plate",
-    "category": "Assembly",
-    "standard_cost": 4.59,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "0a497567-adbf-440d-a04d-a77664c5890a",
-      "11377984-a1aa-4585-9904-5f9468666d49",
-      "70991141-f9e2-44d7-b91d-8876abd7069e",
-      "beded468-ac8c-4e81-b044-c861b94334cd",
-      "f2e01ff1-f3e3-42d8-97bb-527f9be92729"
-    ]
-  },
-  {
-    "part_id": "SKU-147",
-    "name": "Heat Sink (Extruded)",
-    "category": "Assembly",
-    "standard_cost": 4.22,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "cbfa957a-9561-4870-b6ae-1a26fa3d2df9",
-      "f2e01ff1-f3e3-42d8-97bb-527f9be92729"
-    ]
-  },
-  {
-    "part_id": "SKU-148",
-    "name": "Control Panel Assembly",
-    "category": "Assembly",
-    "standard_cost": 22.08,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "cb96a579-bdd1-4460-a950-fa98ad9074e8",
-      "fb7ce668-6d54-487b-a033-6388049c0dec"
-    ]
-  },
-  {
-    "part_id": "SKU-149",
-    "name": "Sensor Module Assembly",
-    "category": "Assembly",
-    "standard_cost": 8.5,
-    "unit_of_measure": "pcs",
-    "valid_supplier_ids": [
-      "04b9bf52-9f54-4686-81b0-2a5bd30c9f56",
-      "0a497567-adbf-440d-a04d-a77664c5890a",
-      "40393509-c40a-47b4-b7e2-073712a2fdde",
-      "7f603748-2b62-4e92-b6db-5768952fd7ff",
-      "f170e41e-4981-456b-974e-2fa0c8bcb6fb"
+      "SUP-004"
     ]
   }
 ]

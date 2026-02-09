@@ -395,8 +395,36 @@ class WorldEngine:
         self.suppliers = load_json(self.data_dir / "suppliers.json")
         self.parts = load_json(self.data_dir / "parts.json")
         self.bom = load_json(self.data_dir / "bom.json")
+        self.bom_by_product: dict[str, list[dict[str, Any]]] = {}
+        if isinstance(self.bom, dict) and "products" in self.bom:
+            for pid, pdata in self.bom.get("products", {}).items():
+                if not isinstance(pdata, dict):
+                    continue
+                comps: list[dict[str, Any]] = []
+                for item in pdata.get("bom", []):
+                    if isinstance(item, dict):
+                        comps.extend(item.get("components", []))
+                self.bom_by_product[pid] = comps
+        else:
+            # Legacy single-product format
+            pid = self.bom.get("product_id") if isinstance(self.bom, dict) else None
+            if pid:
+                comps = []
+                for item in (self.bom.get("bom", []) if isinstance(self.bom, dict) else []):
+                    if isinstance(item, dict):
+                        comps.extend(item.get("components", []))
+                self.bom_by_product[pid] = comps
         self.customers = load_json(self.data_dir / "customers.json")
         self.facilities = load_json_or_default(self.data_dir / "facilities.json", [])
+        products_data = load_json_or_default(self.data_dir / "products.json", [])
+        if isinstance(products_data, list):
+            self.product_ids = [p.get("product_id") for p in products_data if isinstance(p, dict) and p.get("product_id")]
+        else:
+            self.product_ids = []
+        if not self.product_ids and self.bom_by_product:
+            self.product_ids = list(self.bom_by_product.keys())
+        if not self.product_ids:
+            self.product_ids = ["D-101"]
         routes_data = load_json_or_default(self.data_dir / "routes.json", {"inbound": [], "outbound": []})
         self.routes_inbound = routes_data.get("inbound", [])
         self.routes_outbound = routes_data.get("outbound", [])
@@ -1095,10 +1123,11 @@ class WorldEngine:
                 self.config["normal_order_qty_max"]
             )
 
+        product_id = self.rng.choice(self.product_ids)
         order = SalesOrder(
             order_id=str(uuid.uuid4()),
             customer_id=customer["customer_id"],
-            product_id="DRONE-X1",
+            product_id=product_id,
             qty=qty,
             created_at=iso_utc(self.current_time),
         )
@@ -1240,8 +1269,8 @@ class WorldEngine:
         """Return the facility_id of the SkyForge plant (first facility with type 'plant')."""
         for f in self.facilities:
             if isinstance(f, dict) and f.get("facility_type") == "plant":
-                return f.get("facility_id", "skyforge_plant")
-        return "skyforge_plant"
+                return f.get("facility_id", "FAC-001")
+        return "FAC-001"
 
     def _facility_location_code(self, facility_id: str) -> str | None:
         """Return location_code for the facility, or None if not found."""
@@ -1597,7 +1626,7 @@ class WorldEngine:
         wip_by_product: dict[str, int] = {}
         for job in jobs:
             if job.get("status") == "WIP":
-                pid = job.get("product_id", "DRONE-X1")
+                pid = job.get("product_id") or (self.product_ids[0] if self.product_ids else "D-101")
                 wip_by_product[pid] = wip_by_product.get(pid, 0) + 1
         product_ids = set(self.inventory.keys()) | set(wip_by_product.keys()) | set(self._last_forecast_by_product.keys())
         for product_id in product_ids:
@@ -1791,21 +1820,8 @@ class WorldEngine:
         )
 
     def _bom_components_for_product(self, product_id: str) -> list[dict[str, Any]]:
-        """
-        Get BOM components for a specific product.
-        
-        Fixed: Now filters by product_id instead of returning all components.
-        """
-        # Check if BOM is for the requested product
-        if self.bom.get("product_id") != product_id:
-            return []
-        
-        components: list[dict[str, Any]] = []
-        for item in self.bom.get("bom", []):
-            if not isinstance(item, dict):
-                continue
-            components.extend(item.get("components", []))
-        return components
+        """Get BOM components for a specific product (from bom_by_product index)."""
+        return self.bom_by_product.get(product_id, [])
 
     def run_production(self) -> None:
         """
@@ -1818,7 +1834,7 @@ class WorldEngine:
         
         for job in self.production_schedule.get("active_jobs", []):
             status = job.get("status")
-            product_id = job.get("product_id", "DRONE-X1")
+            product_id = job.get("product_id") or (self.product_ids[0] if self.product_ids else "D-101")
             
             if status == "Planned":
                 # Try to start production
@@ -1871,7 +1887,7 @@ class WorldEngine:
 
     def _complete_production_job(self, job: dict) -> None:
         """Complete a production job and add finished goods to inventory."""
-        product_id = job.get("product_id", "DRONE-X1")
+        product_id = job.get("product_id") or (self.product_ids[0] if self.product_ids else "D-101")
         
         # Add 1 unit of finished product to inventory
         if product_id not in self.inventory:

@@ -56,6 +56,13 @@
       "drone_x1_pieces_per_unit": 1
     }
   },
+  "run-service": {
+    "tick_interval": 5,
+    "seed": 42,
+    "api_host": "127.0.0.1",
+    "api_port": 8010,
+    "api_enabled": true
+  },
   "all": {
     "ticks": 24,
     "seed": 42,

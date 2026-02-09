@@ -270,6 +270,9 @@ def run_continuous_service(
     resume: bool,
     seed: int | None,
     engine_config: dict[str, Any] | None = None,
+    api_host: str = "127.0.0.1",
+    api_port: int = 8010,
+    api_enabled: bool = True,
 ) -> None:
     """Run simulation as a continuous 24/7 service.
     
@@ -338,6 +341,23 @@ def run_continuous_service(
     
     signal.signal(signal.SIGTERM, handle_shutdown)
     signal.signal(signal.SIGINT, handle_shutdown)
+    
+    # Start live API in daemon thread (read-only; call and get values)
+    if api_enabled:
+        try:
+            import threading
+            from scripts.api import create_app
+            import uvicorn
+            app = create_app(engine)
+            thread = threading.Thread(
+                target=uvicorn.run,
+                kwargs={"app": app, "host": api_host, "port": api_port},
+                daemon=True,
+            )
+            thread.start()
+            logger.info(f"  API: http://{api_host}:{api_port} (GET /status, /inventory, /backorders, /deliveries)")
+        except Exception as e:
+            logger.warning(f"Could not start API server: {e}")
     
     logger.info(f"Service configuration:")
     logger.info(f"  Tick interval: {tick_interval} seconds")
@@ -587,15 +607,19 @@ Examples:
         tick_interval = resolve_value(args.tick_interval, section, "tick_interval", 5.0)
         seed = resolve_value(args.seed, section, "seed", 42)
         engine_config = section.get("engine", {})
-        
+        api_host = section.get("api_host", "127.0.0.1")
+        api_port = section.get("api_port", 8010)
+        api_enabled = section.get("api_enabled", True)
         # --fresh overrides --resume
         resume = not args.fresh
-        
         run_continuous_service(
             tick_interval=tick_interval,
             resume=resume,
             seed=seed,
-            engine_config=engine_config
+            engine_config=engine_config,
+            api_host=api_host,
+            api_port=api_port,
+            api_enabled=api_enabled,
         )
         return 0
 
