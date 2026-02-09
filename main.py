@@ -122,6 +122,8 @@ def generate_all(seed: int | None = None) -> None:
     run_script("generate_suppliers.py", seed_args)
     print("Generating parts...")
     run_script("generate_parts.py", seed_args)
+    print("Generating products...")
+    run_script("generate_products.py", seed_args)
     print("Generating BOM...")
     run_script("generate_bom.py", [])
     print("Generating facilities...")
