@@ -8,6 +8,8 @@ Keep in mind that the JSONs included in the data/ folder of this repo are there 
 
 I'm running the simulation on a Ubuntu Server VM hosted on Azure, and I store all the data in a PostgreSQL Azure server, which is also needed for the simulation to store its current state and to restart from the same point. Feel free to design your own workflow.
 
+Quick User Manual: https://jumpshare.com/share/9wm0HgFKBPtVBGHH2w7g
+
 ## The Business Scenario
 
 You're the data engineer at **SkyForge Dynamics**, a mid-sized manufacturer of industrial drones. The company produces the **DRONE-X1**, a commercial-grade quadcopter used for surveying, inspection, and delivery applications.
