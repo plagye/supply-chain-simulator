@@ -22,14 +22,13 @@ def get_engine() -> Any:
     return _engine
 
 
+app = FastAPI(title="Supply Chain Simulator API", description="Read-only live state. Call and get values.")
+
+
 def create_app(engine: Any | None = None) -> FastAPI:
     if engine is not None:
         set_engine(engine)
-    app = FastAPI(title="Supply Chain Simulator API", description="Read-only live state. Call and get values.")
     return app
-
-
-app = create_app()
 
 
 def _iso_utc(dt: datetime) -> str:
