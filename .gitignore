@@ -41,11 +41,10 @@ env/
 Thumbs.db
 desktop.ini
 
-# Simulation output (date-partitioned event JSONL and corruption meta)
+# Simulation output (date-partitioned event JSONL)
 data/events/
 # Legacy single-file logs (no longer used; kept so they are not committed if present)
 data/daily_events_log.jsonl
-data/corruption_meta_log.jsonl
 
 # Keep the data directory but ignore large generated files
 # The JSON master data files are tracked (small, useful as examples)

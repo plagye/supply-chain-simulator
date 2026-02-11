@@ -47,7 +47,6 @@ import io
 import json
 import os
 import random
-import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
@@ -81,9 +80,6 @@ DEFAULT_CONFIG = {
     "partial_shipment_max_pct": 0.95,
     "quality_reject_rate_min": 0.01,
     "quality_reject_rate_max": 0.05,
-    # Data corruption settings (for error handling practice)
-    "data_corruption_enabled": True,
-    "data_corruption_probability": 0.01,
     # Cost variation settings
     "cost_drift_enabled": True,
     "cost_drift_daily_pct": 0.005,
@@ -158,12 +154,6 @@ SUPPLIER_SEASONALITY = {
         ((2, 16), (2, 28), {"lead_time_mult": 1.5, "reliability_mult": 0.8}),
         # October Golden Week
         ((10, 1), (10, 7), {"lead_time_mult": 1.8, "reliability_mult": 0.75}),
-    ],
-    "Taiwan": [
-        # Chinese New Year impact
-        ((1, 15), (1, 31), {"lead_time_mult": 2.0, "reliability_mult": 0.75}),
-        ((2, 1), (2, 15), {"lead_time_mult": 2.5, "reliability_mult": 0.6}),
-        ((2, 16), (2, 28), {"lead_time_mult": 1.3, "reliability_mult": 0.85}),
     ],
     "Germany": [
         # August vacation season
@@ -389,7 +379,6 @@ class WorldEngine:
         self.events_dir = Path(events_dir_raw) if Path(events_dir_raw).is_absolute() else BASE_DIR / events_dir_raw
         self._events_current_day: date | None = None
         self._events_file: io.TextIOWrapper | None = None
-        self._corruption_log_path = self.events_dir / "_meta" / "corruption_meta_log.jsonl"
 
         # Master data (loaded once)
         self.suppliers = load_json(self.data_dir / "suppliers.json")
@@ -535,10 +524,6 @@ class WorldEngine:
     def _log_event_to_json(self, event: dict[str, Any]) -> None:
         """Append an event to JSONL: single file (historical) or date-partitioned (run-service/simulate)."""
         json_line = json.dumps(event, ensure_ascii=False)
-        if (self.config.get("data_corruption_enabled", False) and
-            self.rng.random() < self.config.get("data_corruption_probability", 0.01)):
-            json_line, corruption_type = self._corrupt_json_line(json_line, event["event_type"])
-            self._log_corruption_meta(event["event_type"], corruption_type)
         try:
             if self._events_single_file and self._events_single_file_path is not None:
                 self._events_single_file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -560,92 +545,6 @@ class WorldEngine:
         except IOError as e:
             import sys
             print(f"Warning: Failed to write event log: {e}", file=sys.stderr)
-
-    def _corrupt_json_line(self, json_line: str, event_type: str) -> tuple[str, str]:
-        """
-        Corrupt a JSON line in various ways for error handling practice.
-        
-        Returns (corrupted_line, corruption_type)
-        """
-        corruption_methods = [
-            self._corrupt_invalid_timestamp,
-            self._corrupt_missing_comma,
-            self._corrupt_truncated_line,
-            self._corrupt_wrong_type,
-            self._corrupt_null_injection,
-        ]
-        
-        method = self.rng.choice(corruption_methods)
-        return method(json_line)
-
-    def _corrupt_invalid_timestamp(self, json_line: str) -> tuple[str, str]:
-        """Replace timestamp with invalid date."""
-        invalid_timestamps = [
-            '"2026-02-30T12:00:00Z"',  # Feb 30 doesn't exist
-            '"2026-13-01T12:00:00Z"',  # Month 13
-            '"2026-01-01T25:00:00Z"',  # Hour 25
-            '"2026-01-01T12:60:00Z"',  # Minute 60
-            '"not-a-date"',
-            '""',
-        ]
-        invalid = self.rng.choice(invalid_timestamps)
-        # Replace the timestamp value
-        corrupted = re.sub(r'"timestamp":\s*"[^"]*"', f'"timestamp": {invalid}', json_line)
-        return corrupted, "invalid_timestamp"
-
-    def _corrupt_missing_comma(self, json_line: str) -> tuple[str, str]:
-        """Remove a comma from the JSON."""
-        # Find positions of commas and remove one
-        comma_positions = [i for i, c in enumerate(json_line) if c == ',']
-        if comma_positions:
-            pos = self.rng.choice(comma_positions)
-            corrupted = json_line[:pos] + json_line[pos+1:]
-            return corrupted, "missing_comma"
-        return json_line, "missing_comma_failed"
-
-    def _corrupt_truncated_line(self, json_line: str) -> tuple[str, str]:
-        """Truncate the line at a random point."""
-        # Cut somewhere between 30% and 80% of the line
-        cut_point = int(len(json_line) * self.rng.uniform(0.3, 0.8))
-        return json_line[:cut_point], "truncated_line"
-
-    def _corrupt_wrong_type(self, json_line: str) -> tuple[str, str]:
-        """Replace a number with a string or vice versa."""
-        # Find a number and replace with string
-        corrupted = re.sub(r'"qty":\s*(\d+)', '"qty": "not_a_number"', json_line, count=1)
-        if corrupted != json_line:
-            return corrupted, "wrong_type_qty"
-        # Or replace a string field with a number
-        corrupted = re.sub(r'"order_id":\s*"[^"]*"', '"order_id": 12345', json_line, count=1)
-        if corrupted != json_line:
-            return corrupted, "wrong_type_order_id"
-        return json_line, "wrong_type_failed"
-
-    def _corrupt_null_injection(self, json_line: str) -> tuple[str, str]:
-        """Replace a value with null where it shouldn't be."""
-        fields_to_null = [
-            (r'"customer_id":\s*"[^"]*"', '"customer_id": null'),
-            (r'"supplier_id":\s*"[^"]*"', '"supplier_id": null'),
-            (r'"product_id":\s*"[^"]*"', '"product_id": null'),
-            (r'"part_id":\s*"[^"]*"', '"part_id": null'),
-        ]
-        pattern, replacement = self.rng.choice(fields_to_null)
-        corrupted = re.sub(pattern, replacement, json_line, count=1)
-        return corrupted, "null_injection"
-
-    def _log_corruption_meta(self, event_type: str, corruption_type: str) -> None:
-        """Log corruption to separate meta file for verification."""
-        meta_event = {
-            "timestamp": iso_utc(self.current_time),
-            "corrupted_event_type": event_type,
-            "corruption_type": corruption_type,
-        }
-        try:
-            self._corruption_log_path.parent.mkdir(parents=True, exist_ok=True)
-            with self._corruption_log_path.open("a", encoding="utf-8") as f:
-                f.write(json.dumps(meta_event, ensure_ascii=False) + "\n")
-        except IOError:
-            pass  # Silent fail for meta log
 
     def tick(self) -> None:
         """

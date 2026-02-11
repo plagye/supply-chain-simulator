@@ -1,6 +1,6 @@
 # Supply Chain Simulator
 
-A discrete-event supply chain simulation for **SkyForge**, a fictional manufacturer of commercial drones. The simulator models demand, production (BOM and jobs), procurement, shipments, invoicing, and delivery across a single plant, multiple distribution centers, and several suppliers and customers. It can run as a one-shot simulation (fixed ticks) or as a **continuous service** with a **live read-only HTTP API** for dashboards and integrations.
+A discrete-event supply chain simulation for **SkyForge Dynamics**, a fictional manufacturer of commercial drones. The simulator models demand, production (BOM and jobs), procurement, shipments, invoicing, and delivery across a single plant, multiple distribution centers, and several suppliers and customers. It can run as a one-shot simulation (fixed ticks) or as a **continuous service** with a **live read-only HTTP API** for dashboards and integrations.
 
 ---
 
@@ -35,6 +35,24 @@ All IDs (parts, products, facilities, routes, customers) are fixed by the genera
 
 ---
 
+## Overview
+
+The simulator generates realistic supply chain events, including:
+
+- Customer demand with business-hour patterns, bulk orders, and **seasonality** (monthly, day-of-week, period-end)
+- Production scheduling with BOM consumption and configurable job duration
+- Procurement with supplier reliability and lead times; partial shipments and quality rejects
+- Inventory management with automatic reorder points
+- Backorders and split shipments when demand exceeds supply
+- Cost drift over time and supplier pricing
+- Invoicing and payments with configurable terms
+- Loads and delivery events (plant → DC by location code)
+- Demand forecasts and S&OP snapshots
+- Promotional demand spikes
+- **Black swan events** (major disruptions when generating 3-year history only)
+
+---
+
 ## Simulation Engine Parameters
 
 Controlled via `config.json` under `simulate.engine` / `run-service.engine` (and `all.engine`). Key groups:
@@ -47,8 +65,7 @@ Controlled via `config.json` under `simulate.engine` / `run-service.engine` (and
 | **Procurement** | `base_lead_time_hours_min`/`_max` | Supplier lead time range. |
 | | `partial_shipment_probability`, `partial_shipment_min_pct`/`_max_pct` | Partial deliveries. |
 | | `quality_reject_rate_min`/`_max` | Incoming quality rejection. |
-| **Data / cost** | `data_corruption_enabled`, `data_corruption_probability` | Optional bad records for ETL testing. |
-| | `cost_drift_enabled`, `cost_drift_daily_pct`, `cost_drift_max_pct` | Daily cost drift cap. |
+| **Cost** | `cost_drift_enabled`, `cost_drift_daily_pct`, `cost_drift_max_pct` | Daily cost drift cap. |
 | **Seasonality** | `seasonality_enabled`, `demand_seasonality_strength`, `supplier_seasonality_strength` | Demand and supply seasonality. |
 | **Invoicing** | `invoice_enabled`, `invoice_payment_days_min`/`_max`, `payment_late_probability`, `payment_late_days_extra` | Payment terms and late payments. |
 | **Pricing** | `default_unit_price` | Default product price (e.g. 1250). |
@@ -69,7 +86,26 @@ python main.py generate
 python main.py simulate --ticks 720
 ```
 
-Events are written to date-partitioned JSONL under `data/events/` (e.g. `YYYY-MM-DD.jsonl`).
+Events are written to date-partitioned JSONL under `data/events/` (e.g. `YYYY-MM-DD.jsonl`). All event lines are valid JSON (one object per line).
+
+---
+
+## Project Layout
+
+```
+supply-chain-simulator/
+├── main.py                 # CLI entry point
+├── config.json             # Configuration defaults
+├── requirements.txt        # Python dependencies
+├── .env.example            # Database credentials template
+├── scripts/
+│   ├── world_engine.py     # Core simulation engine
+│   ├── api.py             # Live HTTP API (FastAPI)
+│   └── generate_*.py       # Data generator scripts
+└── data/
+    ├── *.json              # Master data and state files
+    └── events/             # Event JSONL (date-partitioned or history.jsonl)
+```
 
 ---
 
@@ -82,6 +118,8 @@ Events are written to date-partitioned JSONL under `data/events/` (e.g. `YYYY-MM
 | `python main.py all [--ticks 720] [--seed 42]` | Generate then simulate. |
 | `python main.py generate-history --years 3 [--seed 42]` | Generate 1–3 years of history to `data/events/history.jsonl`. |
 | `python main.py run-service [--tick-interval 5] [--resume \| --fresh]` | Run as continuous service (state in PostgreSQL optional); **live API** available when enabled in config. |
+
+**Options:** `generate` and `simulate`/`all` accept `--seed`. `simulate`/`all` accept `--ticks` (hours). `generate-history` requires `--years` (1, 2, or 3); black swan events run only for 3 years. `run-service` uses `--resume` (default) or `--fresh` and `--tick-interval` (seconds between ticks).
 
 ---
 
@@ -119,23 +157,83 @@ curl http://127.0.0.1:8010/deliveries
 ## Config
 
 - **run-service:** `tick_interval`, `seed`, `api_host` (default `127.0.0.1`), `api_port` (default `8010`), `api_enabled` (default `true`).
-- **simulate / run-service / all:** Full `engine` block for demand, production, suppliers, invoicing, forecast, S&OP, promo, delivery, data_corruption, cost_drift, seasonality. See `config.json`.
+- **simulate / run-service / all:** Full `engine` block for demand, production, suppliers, invoicing, forecast, S&OP, promo, delivery, cost_drift, seasonality. See `config.json`.
 
 ---
 
 ## Output Files
 
 - **Master data:** `data/suppliers.json`, `parts.json`, `products.json` (from `generate_products.py`), `bom.json`, `customers.json`, `facilities.json`, `routes.json`, `inventory.json`, `production_schedule.json`.
-- **Events:** `simulate` and `run-service` write date-partitioned JSONL under `data/events/` (e.g. `YYYY-MM-DD.jsonl`). `generate-history` writes `data/events/history.jsonl`.
-- **Corruption meta:** `data/events/_meta/corruption_meta_log.jsonl` (for ETL quarantine verification).
+- **Events:** `simulate` and `run-service` write date-partitioned JSONL under `data/events/` (e.g. `YYYY-MM-DD.jsonl`). `generate-history` writes a single file `data/events/history.jsonl`. **Every line is valid JSON** (one object per line). Event payloads use the 10 product IDs (D-101..D-303) and 10 part IDs (P-001..P-010).
 
-Event types include SalesOrderCreated, ShipmentCreated, LoadCreated, DeliveryEvent, InvoiceCreated, PaymentReceived, ProductionJob*, PurchaseOrder*, and others; only entity IDs align with the 10 parts and 10 products above.
+### Event Types
+
+| Event | Description | Key Payload Fields |
+|-------|-------------|-------------------|
+| `SalesOrderCreated` | Customer places order | `order_id`, `customer_id`, `product_id`, `qty` |
+| `ShipmentCreated` | Order shipped in full | `order_id`, `product_id`, `qty`, `remaining_stock` |
+| `PartialShipmentCreated` | Partial fulfillment | `order_id`, `qty_shipped`, `qty_backordered` |
+| `BackorderCreated` | Order cannot be fulfilled | `order_id`, `qty_backordered`, `reason` |
+| `BackorderFulfilled` | Backorder shipped | `order_id`, `qty_shipped`, `qty_still_pending` |
+| `LoadCreated` | Load dispatched for delivery | `load_id`, `order_id`, `route_id`, `product_id`, `qty`, `weight_lbs`, `scheduled_delivery` |
+| `DeliveryEvent` | Pickup or delivery at facility | `load_id`, `event_type` (Pickup/Delivery), `facility_id`, `actual_datetime` |
+| `InvoiceCreated` | Invoice issued | `invoice_id`, `order_id`, `product_id`, `qty`, `amount`, `due_date` |
+| `PaymentReceived` | Customer payment | `invoice_id`, `order_id`, `amount`, `paid_at`, `on_time` |
+| `ProductionJobCreated` | New production job | `job_id`, `product_id`, `production_duration_hours` |
+| `ProductionStarted` | Job begins | `job_id`, `expected_completion` |
+| `ProductionCompleted` | Job finished | `job_id`, `new_qty_on_hand` |
+| `PurchaseOrderCreated` | Parts ordered | `purchase_order_id`, `part_id`, `qty`, `unit_cost`, `eta` |
+| `PurchaseOrderReceived` | Parts received | `purchase_order_id`, `qty_received`, `new_qty_on_hand` |
+| `ReorderTriggered` | Auto-reorder | `part_id`, `qty_on_hand`, `reorder_point` |
+| `DemandForecastCreated` | Demand forecast snapshot | `product_id`, `forecast_qty`, `horizon_days` |
+| `SOPSnapshotCreated` | S&OP planning snapshot | `product_id`, `demand_forecast_qty`, `supply_plan_qty` |
+| `PromoActive` | Promo started | `promo_id`, `demand_multiplier` |
+| `BlackSwanEventStarted` / `BlackSwanEventEnded` | Major disruption | `name`, `affected_countries`, `demand_multiplier` |
 
 ---
 
 ## Database (optional)
 
 PostgreSQL is used by `run-service` for **resume** (current simulation time and tick count). Use your own schema and pipeline to load events from JSONL. See `.env.example` for DB credentials.
+
+---
+
+## Data Engineering Practice
+
+You can use the event data for typical data engineering tasks:
+
+- **Schema design:** Design a PostgreSQL (or other) schema from the JSON master data and event payloads; choose normalized vs denormalized structures and appropriate types and indexes.
+- **Pipeline:** Parse the JSONL files in `data/events/` (each line is valid JSON) and load into your database; no quarantine step is needed.
+- **Modeling:** Join events (e.g. `PurchaseOrderCreated` → `PurchaseOrderReceived` via `purchase_order_id`); build dimensional models for analytics.
+- **Analytics:** Compute lead times, on-time delivery, inventory turns; analyze seasonality; build dashboards in PowerBI, Tableau, or Metabase.
+
+---
+
+## Example Workflows
+
+**Batch: generate data and run a month of simulation**
+
+```bash
+python main.py generate --seed 42
+python main.py simulate --ticks 720 --seed 42
+```
+
+**Historical backfill and 24/7 service**
+
+```bash
+python main.py generate --seed 42
+python main.py generate-history --years 3 --seed 42
+# Load data/events/history.jsonl into your database (optional)
+python main.py run-service --tick-interval 5 --fresh
+```
+
+---
+
+## Design and Implementation Notes
+
+- **Event output:** `generate-history` writes a **single file** (`data/events/history.jsonl`) with no per-day rollover for speed. `simulate` and `run-service` write **date-partitioned** JSONL (one file per simulation day, `YYYY-MM-DD.jsonl`). Events are flushed on day rollover and on `save_state` (exit).
+- **Black swan:** Major disruption events are included only when generating **3 years** of history; the event is placed in year 2 of the run.
+- **Product and part IDs:** All event payloads use the 10 products (D-101..D-303) and 10 parts (P-001..P-010) defined by the generators.
 
 ---
 
