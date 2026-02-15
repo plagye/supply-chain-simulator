@@ -46,7 +46,9 @@ def generate_inventory(
     seed: int | None = 42,
     min_qty: int = 100,
     max_qty: int = 1000,
-    finished_product_qty: int = 0,
+    finished_product_qty: int | None = None,
+    mean_daily_demand: int = 2,
+    days_of_stock: int = 7,
 ) -> dict[str, dict[str, Any]]:
     rng = random.Random(seed)
     part_ids = load_part_ids(parts_path)
@@ -57,6 +59,10 @@ def generate_inventory(
         qty_on_hand = rng.randint(min_qty, max_qty)
         reorder_point, safety_stock = inventory_levels_for_part(qty_on_hand)
         inventory[pid] = {"qty_on_hand": qty_on_hand, "reorder_point": reorder_point, "safety_stock": safety_stock}
+
+    # Pre-seed finished goods: explicit qty, or mean_daily_demand * days_of_stock
+    if finished_product_qty is None:
+        finished_product_qty = max(0, mean_daily_demand * days_of_stock)
 
     fp_reorder_point = 15
     fp_safety_stock = 5
@@ -77,7 +83,9 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=42, help="RNG seed.")
     parser.add_argument("--min-qty", type=int, default=100, help="Min starting qty per part.")
     parser.add_argument("--max-qty", type=int, default=1000, help="Max starting qty per part.")
-    parser.add_argument("--finished-product-qty", type=int, default=0, help="Starting on-hand per finished product (default 0).")
+    parser.add_argument("--finished-product-qty", type=int, default=None, help="Starting on-hand per finished product (default: mean_daily_demand * days_of_stock).")
+    parser.add_argument("--mean-daily-demand", type=int, default=2, help="Mean daily demand per product for pre-seed (default 2).")
+    parser.add_argument("--days-of-stock", type=int, default=7, help="Days of stock for pre-seed (default 7).")
     args = parser.parse_args()
 
     inventory = generate_inventory(
@@ -87,6 +95,8 @@ def main() -> int:
         min_qty=args.min_qty,
         max_qty=args.max_qty,
         finished_product_qty=args.finished_product_qty,
+        mean_daily_demand=args.mean_daily_demand,
+        days_of_stock=args.days_of_stock,
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(inventory, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

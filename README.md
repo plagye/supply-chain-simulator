@@ -53,6 +53,25 @@ The simulator generates realistic supply chain events, including:
 
 ---
 
+## Findings and Improvements
+
+I ran a data analysis on simulation output and reviewed the codebase with a senior data engineer. We found several unrealistic behaviours and implemented fixes so the simulation behaves more like a real supply chain.
+
+| Finding | Before | After (target) |
+|--------|--------|------------------|
+| **Backorder rate** | Nearly 100% of orders became backorders | Pre-seeded FG inventory + net-position reorder + batch production → target &lt;30% |
+| **Order-to-invoice delay** | Mean ~851 days (2.3 years) to first fulfillment | Fulfillment in days/weeks; first invoice aligned with shipment |
+| **Delivery timeliness** | 100% of deliveries on time | Stochastic disruptions (e.g. 5% chance of 1–3 day delay); ~90–95% on-time with 12h grace |
+| **Load consolidation** | ~92% of loads had quantity 1 | Staging + batch by destination/product; flush by weight or wait days → more multi-unit loads |
+| **Forecasting** | Systematic underforecast (MAPE ~51–63%) | Bias correction multiplier (e.g. 1.15); forecast on true demand (order qty) |
+| **Supplier lead times** | 100% matched projected ETA | Variance on receipt (e.g. ±48 h); `projected_eta` vs `actual_receipt_time` in events |
+
+Root cause of the multi-year fulfillment delay was a “death spiral”: finished goods started at 0, each production job produced only 1 unit, and reorder logic ignored backorders. On the worst day in a pre-fix 3-year run (latest day with data, **2032-04-15**), the backlog had grown to **60,306 pending orders** and **239,681 pending units**—and was still increasing every day. That illustrates the death spiral: the system could never catch up. We now pre-seed finished goods (e.g. 7 days of demand), use **net inventory position** (on hand + incoming production − backorders) for both parts and finished goods, and run production in configurable batch sizes with proactive replenishment from forecast and backorders.
+
+For the full analysis and code-level recommendations, see [findings/findings.md](findings/findings.md).
+
+---
+
 ## Simulation Engine Parameters
 
 Controlled via `config.json` under `simulate.engine` / `run-service.engine` (and `all.engine`). Key groups:
@@ -62,17 +81,21 @@ Controlled via `config.json` under `simulate.engine` / `run-service.engine` (and
 | **Demand** | `demand_probability_base`, `demand_probability_business_hours`, `business_hours_start`/`_end` | Base and business-hour order probabilities (per tick). |
 | | `bulk_order_probability`, `bulk_order_qty_min`/`_max`, `normal_order_qty_min`/`_max` | Bulk vs normal order sizes. |
 | **Production** | `production_duration_hours_min`/`_max` | Job duration range. |
+| | `production_batch_size_min`/`_max` | Units per production job (e.g. 5–15). |
+| | `finished_goods_reorder_enabled`, `finished_goods_max_jobs_per_product_per_day` | Net-position FG replenishment and throttle. |
 | **Procurement** | `base_lead_time_hours_min`/`_max` | Supplier lead time range. |
+| | `supplier_lead_time_variance_hours` | ± hours variance on actual receipt vs ETA. |
 | | `partial_shipment_probability`, `partial_shipment_min_pct`/`_max_pct` | Partial deliveries. |
 | | `quality_reject_rate_min`/`_max` | Incoming quality rejection. |
 | **Cost** | `cost_drift_enabled`, `cost_drift_daily_pct`, `cost_drift_max_pct` | Daily cost drift cap. |
 | **Seasonality** | `seasonality_enabled`, `demand_seasonality_strength`, `supplier_seasonality_strength` | Demand and supply seasonality. |
 | **Invoicing** | `invoice_enabled`, `invoice_payment_days_min`/`_max`, `payment_late_probability`, `payment_late_days_extra` | Payment terms and late payments. |
 | **Pricing** | `default_unit_price` | Default product price (e.g. 1250). |
-| **Planning** | `forecast_enabled`, `forecast_horizon_days`, `forecast_window_days`, `requirements_lead_time_days` | Demand forecast and planning horizon. |
+| **Planning** | `forecast_enabled`, `forecast_horizon_days`, `forecast_window_days`, `forecast_bias_correction_mult`, `requirements_lead_time_days` | Demand forecast, bias correction, planning horizon. |
 | | `sop_enabled`, `sop_frequency` | S&OP snapshot frequency (e.g. monthly). |
 | **Promo** | `promo_enabled`, `promo_probability`, `promo_duration_days`, `promo_demand_multiplier_min`/`_max` | Promotional demand spikes. |
-| **Delivery** | `delivery_enabled`, `delivery_transit_delay_max_hours` | Delivery events and max transit delay. |
+| **Delivery** | `delivery_enabled`, `delivery_transit_delay_max_hours`, `delivery_disruption_probability`, `delivery_disruption_days_min`/`_max`, `delivery_grace_hours` | Delivery events, stochastic delays, on-time grace. |
+| | `load_consolidation_enabled`, `load_weight_limit_lbs`, `load_flush_days` | Staging and batch shipping. |
 
 Exact keys and defaults are in `config.json`; the engine reads the whole `engine` block.
 
@@ -119,7 +142,7 @@ supply-chain-simulator/
 | `python main.py generate-history --years 3 [--seed 42]` | Generate 1–3 years of history to `data/events/history.jsonl`. |
 | `python main.py run-service [--tick-interval 5] [--resume \| --fresh]` | Run as continuous service (state in PostgreSQL optional); **live API** available when enabled in config. |
 
-**Options:** `generate` and `simulate`/`all` accept `--seed`. `simulate`/`all` accept `--ticks` (hours). `generate-history` requires `--years` (1, 2, or 3); black swan events run only for 3 years. `run-service` uses `--resume` (default) or `--fresh` and `--tick-interval` (seconds between ticks).
+**Options:** `generate` and `simulate`/`all` accept `--seed`. `simulate`/`all` accept `--ticks` (hours). `generate-history` requires `--years` (1, 2, or 3); black swan events run only for 3 years. `run-service` uses `--resume` (default) or `--fresh` and `--tick-interval` (seconds between ticks). Inventory generation supports `--mean-daily-demand`, `--days-of-stock`, and `--finished-product-qty` (see `scripts/generate_inventory.py --help`); by default finished goods are pre-seeded with `mean_daily_demand * days_of_stock` (e.g. 14 units per product).
 
 ---
 
@@ -175,16 +198,16 @@ curl http://127.0.0.1:8010/deliveries
 | `PartialShipmentCreated` | Partial fulfillment | `order_id`, `qty_shipped`, `qty_backordered` |
 | `BackorderCreated` | Order cannot be fulfilled | `order_id`, `qty_backordered`, `reason` |
 | `BackorderFulfilled` | Backorder shipped | `order_id`, `qty_shipped`, `qty_still_pending` |
-| `LoadCreated` | Load dispatched for delivery | `load_id`, `order_id`, `route_id`, `product_id`, `qty`, `weight_lbs`, `scheduled_delivery` |
-| `DeliveryEvent` | Pickup or delivery at facility | `load_id`, `event_type` (Pickup/Delivery), `facility_id`, `actual_datetime` |
+| `LoadCreated` | Load dispatched for delivery | `load_id`, `order_id`, `order_ids` (list when consolidated), `route_id`, `product_id`, `qty`, `weight_lbs`, `scheduled_delivery`, `actual_delivery` |
+| `DeliveryEvent` | Pickup or delivery at facility | `load_id`, `event_type` (Pickup/Delivery), `facility_id`, `scheduled_datetime`, `actual_datetime`, `on_time_flag` |
 | `InvoiceCreated` | Invoice issued | `invoice_id`, `order_id`, `product_id`, `qty`, `amount`, `due_date` |
 | `PaymentReceived` | Customer payment | `invoice_id`, `order_id`, `amount`, `paid_at`, `on_time` |
-| `ProductionJobCreated` | New production job | `job_id`, `product_id`, `production_duration_hours` |
+| `ProductionJobCreated` | New production job | `job_id`, `product_id`, `production_duration_hours`, `qty_per_job` |
 | `ProductionStarted` | Job begins | `job_id`, `expected_completion` |
-| `ProductionCompleted` | Job finished | `job_id`, `new_qty_on_hand` |
+| `ProductionCompleted` | Job finished | `job_id`, `qty_produced`, `new_qty_on_hand` |
 | `PurchaseOrderCreated` | Parts ordered | `purchase_order_id`, `part_id`, `qty`, `unit_cost`, `eta` |
-| `PurchaseOrderReceived` | Parts received | `purchase_order_id`, `qty_received`, `new_qty_on_hand` |
-| `ReorderTriggered` | Auto-reorder | `part_id`, `qty_on_hand`, `reorder_point` |
+| `PurchaseOrderReceived` | Parts received | `purchase_order_id`, `qty_received`, `new_qty_on_hand`, `projected_eta`, `actual_receipt_time` |
+| `ReorderTriggered` | Auto-reorder (parts or FG) | `part_id`, `qty_on_hand`, `reorder_point`, `net_position` (parts), `order_qty` |
 | `DemandForecastCreated` | Demand forecast snapshot | `product_id`, `forecast_qty`, `horizon_days` |
 | `SOPSnapshotCreated` | S&OP planning snapshot | `product_id`, `demand_forecast_qty`, `supply_plan_qty` |
 | `PromoActive` | Promo started | `promo_id`, `demand_multiplier` |

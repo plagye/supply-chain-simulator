@@ -1,51 +1,51 @@
 {
   "P-001": {
-    "qty_on_hand": 753,
+    "qty_on_hand": 1004,
     "reorder_point": 188,
     "safety_stock": 75
   },
   "P-002": {
-    "qty_on_hand": 213,
+    "qty_on_hand": 890,
     "reorder_point": 54,
     "safety_stock": 21
   },
   "P-003": {
-    "qty_on_hand": 121,
+    "qty_on_hand": 489,
     "reorder_point": 31,
     "safety_stock": 20
   },
   "P-004": {
-    "qty_on_hand": 851,
+    "qty_on_hand": 9,
     "reorder_point": 215,
     "safety_stock": 86
   },
   "P-005": {
-    "qty_on_hand": 369,
+    "qty_on_hand": 7824,
     "reorder_point": 95,
     "safety_stock": 38
   },
   "P-006": {
-    "qty_on_hand": 349,
+    "qty_on_hand": 0,
     "reorder_point": 88,
     "safety_stock": 35
   },
   "P-007": {
-    "qty_on_hand": 326,
+    "qty_on_hand": 528,
     "reorder_point": 82,
     "safety_stock": 33
   },
   "P-008": {
-    "qty_on_hand": 240,
+    "qty_on_hand": 974,
     "reorder_point": 60,
     "safety_stock": 24
   },
   "P-009": {
-    "qty_on_hand": 854,
+    "qty_on_hand": 897,
     "reorder_point": 214,
     "safety_stock": 85
   },
   "P-010": {
-    "qty_on_hand": 204,
+    "qty_on_hand": 511,
     "reorder_point": 51,
     "safety_stock": 20
   },
@@ -70,7 +70,7 @@
     "safety_stock": 5
   },
   "D-202": {
-    "qty_on_hand": 0,
+    "qty_on_hand": 92,
     "reorder_point": 15,
     "safety_stock": 5
   },
@@ -80,17 +80,17 @@
     "safety_stock": 5
   },
   "D-204": {
-    "qty_on_hand": 0,
+    "qty_on_hand": 54,
     "reorder_point": 15,
     "safety_stock": 5
   },
   "D-301": {
-    "qty_on_hand": 0,
+    "qty_on_hand": 70,
     "reorder_point": 15,
     "safety_stock": 5
   },
   "D-302": {
-    "qty_on_hand": 0,
+    "qty_on_hand": 218,
     "reorder_point": 15,
     "safety_stock": 5
   },

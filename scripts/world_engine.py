@@ -72,6 +72,10 @@ DEFAULT_CONFIG = {
     # Production settings
     "production_duration_hours_min": 8,
     "production_duration_hours_max": 24,
+    "production_batch_size_min": 5,
+    "production_batch_size_max": 15,
+    "finished_goods_reorder_enabled": True,
+    "finished_goods_max_jobs_per_product_per_day": 2,
     # Supplier/procurement settings
     "base_lead_time_hours_min": 24,
     "base_lead_time_hours_max": 168,
@@ -80,6 +84,7 @@ DEFAULT_CONFIG = {
     "partial_shipment_max_pct": 0.95,
     "quality_reject_rate_min": 0.01,
     "quality_reject_rate_max": 0.05,
+    "supplier_lead_time_variance_hours": 48,
     # Cost variation settings
     "cost_drift_enabled": True,
     "cost_drift_daily_pct": 0.005,
@@ -99,6 +104,7 @@ DEFAULT_CONFIG = {
     "forecast_enabled": True,
     "forecast_horizon_days": 7,
     "forecast_window_days": 14,
+    "forecast_bias_correction_mult": 1.15,
     # Requirement planning (MRP-style)
     "requirements_lead_time_days": 30,
     # S&OP snapshots (Tactical)
@@ -113,6 +119,13 @@ DEFAULT_CONFIG = {
     # Delivery (loads and delivery events)
     "delivery_enabled": True,
     "delivery_transit_delay_max_hours": 12,
+    "delivery_disruption_probability": 0.05,
+    "delivery_disruption_days_min": 1,
+    "delivery_disruption_days_max": 3,
+    "delivery_grace_hours": 12,
+    "load_consolidation_enabled": True,
+    "load_weight_limit_lbs": 500,
+    "load_flush_days": 3,
     "drone_x1_weight_lbs": 5.0,
     "drone_x1_pieces_per_unit": 1,
 }
@@ -235,6 +248,7 @@ class PendingPurchaseOrder:
     eta: datetime
     created_at: datetime
     unit_cost: float = 0.0  # Actual cost at time of order
+    actual_arrival: datetime | None = None  # ETA + stochastic variance (when set, receive at this time)
 
 
 @dataclass
@@ -262,10 +276,22 @@ class PendingInvoice:
 
 
 @dataclass
+class ReadyForShippingItem:
+    """One fulfilled line waiting to be consolidated into a load."""
+    order_id: str
+    customer_id: str
+    product_id: str
+    qty: int
+    destination_facility_id: str
+    ready_at: datetime
+
+
+@dataclass
 class PendingDelivery:
     """Tracks a load scheduled for delivery (Pickup/Delivery events when due)."""
     load_id: str
-    order_id: str
+    order_id: str  # Primary (first order; for backward compat)
+    order_ids: list[str]  # All orders on this load (consolidated)
     customer_id: str
     route_id: str
     product_id: str
@@ -274,6 +300,7 @@ class PendingDelivery:
     pieces: int
     scheduled_pickup: datetime
     scheduled_delivery: datetime
+    actual_delivery: datetime  # When delivery actually occurs (may be late)
     origin_facility_id: str
     destination_facility_id: str
 
@@ -458,8 +485,15 @@ class WorldEngine:
         # Pending deliveries (loads awaiting delivery completion)
         self._pending_deliveries: list[PendingDelivery] = []
         
+        # Ready-for-shipping staging (for load consolidation)
+        self._ready_for_shipping: list[ReadyForShippingItem] = []
+        
         # Track parts with pending reorders to avoid duplicate POs
         self._parts_on_order: set[str] = set()
+        
+        # Throttle: FG jobs created per product per day (reset when day changes)
+        self._last_fg_reorder_date: date | None = None
+        self._jobs_created_today_by_product: dict[str, int] = {}
         
         # Cost drift tracking (random walk for each part)
         self._cost_drift: dict[str, float] = {}  # part_id -> drift multiplier (-0.2 to +0.2)
@@ -572,6 +606,7 @@ class WorldEngine:
         self._process_pending_purchase_orders()
         self._process_pending_backorders()
         self._process_pending_invoices()
+        self._process_ready_for_shipping()
         self._process_pending_deliveries()
         self._check_reorder_points()
         self.generate_demand()
@@ -912,7 +947,7 @@ class WorldEngine:
                 product_id=backorder.product_id,
                 qty=qty_to_ship,
             )
-            self._create_load_and_schedule_delivery(
+            self._schedule_fulfillment_delivery(
                 order_id=backorder.order_id,
                 customer_id=backorder.customer_id,
                 product_id=backorder.product_id,
@@ -1086,7 +1121,7 @@ class WorldEngine:
                 product_id=order.product_id,
                 qty=order.qty,
             )
-            self._create_load_and_schedule_delivery(
+            self._schedule_fulfillment_delivery(
                 order_id=order.order_id,
                 customer_id=order.customer_id,
                 product_id=order.product_id,
@@ -1125,7 +1160,7 @@ class WorldEngine:
                 product_id=order.product_id,
                 qty=qty_shipped,
             )
-            self._create_load_and_schedule_delivery(
+            self._schedule_fulfillment_delivery(
                 order_id=order.order_id,
                 customer_id=order.customer_id,
                 product_id=order.product_id,
@@ -1196,7 +1231,7 @@ class WorldEngine:
                 return r
         return None
 
-    def _create_load_and_schedule_delivery(
+    def _schedule_fulfillment_delivery(
         self,
         *,
         order_id: str,
@@ -1204,7 +1239,41 @@ class WorldEngine:
         product_id: str,
         qty: int,
     ) -> None:
-        """Create a load, emit LoadCreated, and schedule Pickup/Delivery events."""
+        """Either stage for load consolidation or create a single load immediately."""
+        if not self.config.get("delivery_enabled", True):
+            return
+        dest_facility_id = self._destination_facility_for_customer(customer_id)
+        if not dest_facility_id:
+            return
+        if self.config.get("load_consolidation_enabled", False):
+            self._ready_for_shipping.append(
+                ReadyForShippingItem(
+                    order_id=order_id,
+                    customer_id=customer_id,
+                    product_id=product_id,
+                    qty=qty,
+                    destination_facility_id=dest_facility_id,
+                    ready_at=self.current_time,
+                )
+            )
+        else:
+            self._create_load_and_schedule_delivery(
+                order_id=order_id,
+                customer_id=customer_id,
+                product_id=product_id,
+                qty=qty,
+            )
+
+    def _create_load_and_schedule_delivery(
+        self,
+        *,
+        order_id: str,
+        customer_id: str,
+        product_id: str,
+        qty: int,
+        order_ids: list[str] | None = None,
+    ) -> None:
+        """Create a load (single or consolidated), emit LoadCreated, and schedule Pickup/Delivery events."""
         if not self.config.get("delivery_enabled", True):
             return
         dest_facility_id = self._destination_facility_for_customer(customer_id)
@@ -1214,12 +1283,21 @@ class WorldEngine:
         route = self._get_route_outbound(plant_id, dest_facility_id)
         if not route:
             return
+        oids = order_ids if order_ids is not None else [order_id]
         load_id = str(uuid.uuid4())
         route_id = route.get("route_id", load_id)
         typical_transit_days = route.get("typical_transit_days", 3)
-        delay_hours = self.rng.randint(0, self.config.get("delivery_transit_delay_max_hours", 12))
         scheduled_pickup = self.current_time
-        scheduled_delivery = self.current_time + timedelta(days=typical_transit_days, hours=delay_hours)
+        scheduled_delivery = self.current_time + timedelta(days=typical_transit_days)
+        disruption_prob = self.config.get("delivery_disruption_probability", 0.05)
+        if self.rng.random() < disruption_prob:
+            d_min = self.config.get("delivery_disruption_days_min", 1)
+            d_max = self.config.get("delivery_disruption_days_max", 3)
+            disruption_days = self.rng.randint(d_min, d_max)
+            actual_delivery = scheduled_delivery + timedelta(days=disruption_days)
+        else:
+            variance_hours = self.rng.randint(0, min(24, self.config.get("delivery_transit_delay_max_hours", 12)))
+            actual_delivery = scheduled_delivery + timedelta(hours=variance_hours)
         weight_lbs = qty * self.config.get("drone_x1_weight_lbs", 5.0)
         pieces = qty * self.config.get("drone_x1_pieces_per_unit", 1)
         distance_miles = route.get("typical_distance_miles", 0)
@@ -1228,6 +1306,7 @@ class WorldEngine:
             {
                 "load_id": load_id,
                 "order_id": order_id,
+                "order_ids": oids,
                 "customer_id": customer_id,
                 "route_id": route_id,
                 "product_id": product_id,
@@ -1237,6 +1316,7 @@ class WorldEngine:
                 "load_status": "dispatched",
                 "scheduled_pickup": iso_utc(scheduled_pickup),
                 "scheduled_delivery": iso_utc(scheduled_delivery),
+                "actual_delivery": iso_utc(actual_delivery),
                 "created_at": iso_utc(self.current_time),
                 "distance_miles": distance_miles,
             },
@@ -1245,6 +1325,7 @@ class WorldEngine:
             PendingDelivery(
                 load_id=load_id,
                 order_id=order_id,
+                order_ids=oids,
                 customer_id=customer_id,
                 route_id=route_id,
                 product_id=product_id,
@@ -1253,23 +1334,62 @@ class WorldEngine:
                 pieces=pieces,
                 scheduled_pickup=scheduled_pickup,
                 scheduled_delivery=scheduled_delivery,
+                actual_delivery=actual_delivery,
                 origin_facility_id=plant_id,
                 destination_facility_id=dest_facility_id,
             )
         )
 
+    def _process_ready_for_shipping(self) -> None:
+        """Group staged items by (destination_facility_id, product_id); create loads when full or flush_days reached."""
+        if not self.config.get("delivery_enabled", True) or not self.config.get("load_consolidation_enabled", False):
+            return
+        weight_limit = self.config.get("load_weight_limit_lbs", 500)
+        flush_days = self.config.get("load_flush_days", 3)
+        flush_cutoff = self.current_time - timedelta(days=flush_days)
+        weight_per_unit = self.config.get("drone_x1_weight_lbs", 5.0)
+
+        # Group by (destination_facility_id, product_id)
+        groups: dict[tuple[str, str], list[ReadyForShippingItem]] = {}
+        for item in self._ready_for_shipping:
+            key = (item.destination_facility_id, item.product_id)
+            groups.setdefault(key, []).append(item)
+
+        to_remove: list[ReadyForShippingItem] = []
+        for (dest_facility_id, product_id), items in groups.items():
+            total_qty = sum(i.qty for i in items)
+            total_weight = total_qty * weight_per_unit
+            oldest_ready = min(i.ready_at for i in items)
+            flush = total_weight >= weight_limit or oldest_ready <= flush_cutoff
+            if not flush or not items:
+                continue
+            order_ids = [i.order_id for i in items]
+            first = items[0]
+            self._create_load_and_schedule_delivery(
+                order_id=first.order_id,
+                customer_id=first.customer_id,
+                product_id=product_id,
+                qty=total_qty,
+                order_ids=order_ids,
+            )
+            to_remove.extend(items)
+
+        for item in to_remove:
+            self._ready_for_shipping.remove(item)
+
     def _process_pending_deliveries(self) -> None:
-        """Emit DeliveryEvent (Pickup and Delivery) for loads whose delivery time has passed."""
+        """Emit DeliveryEvent (Pickup and Delivery) for loads whose actual_delivery time has passed."""
         if not self.config.get("delivery_enabled", True):
             return
         still_pending = []
-        grace_hours = 24
+        grace_hours = self.config.get("delivery_grace_hours", 12)
         for pd in self._pending_deliveries:
-            if self.current_time < pd.scheduled_delivery:
+            if self.current_time < pd.actual_delivery:
                 still_pending.append(pd)
                 continue
-            actual_delivery = pd.scheduled_delivery + timedelta(minutes=self.rng.randint(0, 120))
-            on_time = actual_delivery <= pd.scheduled_delivery + timedelta(hours=grace_hours)
+            # Small variance for actual timestamp (0-120 min) for realism
+            actual_datetime = pd.actual_delivery + timedelta(minutes=self.rng.randint(0, 120))
+            on_time = actual_datetime <= pd.scheduled_delivery + timedelta(hours=grace_hours)
             self._log_event(
                 "DeliveryEvent",
                 {
@@ -1291,7 +1411,7 @@ class WorldEngine:
                     "event_type": "Delivery",
                     "facility_id": pd.destination_facility_id,
                     "scheduled_datetime": iso_utc(pd.scheduled_delivery),
-                    "actual_datetime": iso_utc(actual_delivery),
+                    "actual_datetime": iso_utc(actual_datetime),
                     "detention_minutes": 0,
                     "on_time_flag": on_time,
                 },
@@ -1465,9 +1585,11 @@ class WorldEngine:
         for _d, product_id, qty in recent:
             by_product[product_id] = by_product.get(product_id, 0) + qty
         seasonal = self._get_demand_seasonality_factor()
+        bias_mult = self.config.get("forecast_bias_correction_mult", 1.0)
         for product_id, total_qty in by_product.items():
             avg_daily = total_qty / days_in_window
-            forecast_qty = max(0, round(avg_daily * horizon_days * seasonal, 2))
+            forecast_qty = avg_daily * horizon_days * seasonal * bias_mult
+            forecast_qty = max(0, round(forecast_qty, 2))
             self._last_forecast_by_product[product_id] = forecast_qty
             self._log_event(
                 "DemandForecastCreated",
@@ -1545,9 +1667,16 @@ class WorldEngine:
                 },
             )
 
-    def create_production_job(self, *, product_id: str) -> None:
-        """Create a new production job for the specified product."""
-        # Calculate production duration based on config
+    def create_production_job(self, *, product_id: str, qty: int | None = None) -> None:
+        """Create a new production job for the specified product with batch size."""
+        # Batch size from config (e.g. 5-15 units per job)
+        batch_min = self.config.get("production_batch_size_min", 1)
+        batch_max = self.config.get("production_batch_size_max", 1)
+        qty_per_job = int(qty) if qty is not None else self.rng.randint(
+            max(1, batch_min),
+            max(1, batch_max),
+        )
+        # Calculate production duration based on config (scale slightly with batch size)
         duration_hours = self.rng.randint(
             self.config["production_duration_hours_min"],
             self.config["production_duration_hours_max"]
@@ -1562,6 +1691,7 @@ class WorldEngine:
             "due_date": iso_utc(self.current_time + timedelta(days=3)),
             "expected_completion": None,  # Set when production starts
             "production_duration_hours": duration_hours,
+            "qty_per_job": qty_per_job,
             "assigned_worker_id": f"WORKER-{self.rng.randint(1, 25):03d}",
         }
         self.production_schedule["active_jobs"].append(job)
@@ -1572,45 +1702,125 @@ class WorldEngine:
                 "product_id": product_id,
                 "status": job["status"],
                 "production_duration_hours": duration_hours,
+                "qty_per_job": qty_per_job,
             },
         )
 
+    def _incoming_production_by_product(self) -> dict[str, int]:
+        """Sum of qty_per_job for all WIP jobs per product."""
+        result: dict[str, int] = {}
+        for job in self.production_schedule.get("active_jobs", []):
+            if job.get("status") != "WIP":
+                continue
+            pid = job.get("product_id")
+            if not pid:
+                continue
+            qty = job.get("qty_per_job", 1)
+            result[pid] = result.get(pid, 0) + qty
+        return result
+
+    def _part_demand_from_wip_jobs(self) -> dict[str, float]:
+        """Sum of parts required by all Planned/WIP jobs (BOM * batch_size)."""
+        demand: dict[str, float] = {}
+        for job in self.production_schedule.get("active_jobs", []):
+            if job.get("status") not in ("Planned", "WIP"):
+                continue
+            product_id = job.get("product_id")
+            if not product_id:
+                continue
+            batch_size = job.get("qty_per_job", 1)
+            for comp in self._bom_components_for_product(product_id):
+                part_id = comp.get("component_id")
+                qty_per = comp.get("qty", 0)
+                if not part_id:
+                    continue
+                demand[part_id] = demand.get(part_id, 0) + qty_per * batch_size
+        return demand
+
     def _check_reorder_points(self) -> None:
         """
-        Check inventory levels against reorder points and trigger automatic POs.
-        
-        Uses the reorder_point and safety_stock fields from inventory data.
+        Check inventory levels against reorder points and trigger automatic POs (parts)
+        or production jobs (finished goods using net inventory position).
         """
+        today = self.current_time.date()
+        # Reset per-day throttle for finished goods when day rolls over
+        if self._last_fg_reorder_date != today:
+            self._last_fg_reorder_date = today
+            self._jobs_created_today_by_product = {}
+
+        incoming_production = self._incoming_production_by_product()
+        backorder_qty_by_product: dict[str, int] = {}
+        for bo in self._pending_backorders:
+            pid = bo.product_id
+            backorder_qty_by_product[pid] = backorder_qty_by_product.get(pid, 0) + bo.qty_remaining
+
+        # --- Finished goods: net position reorder (proactive production) ---
+        if self.config.get("finished_goods_reorder_enabled", True):
+            max_jobs_per_day = self.config.get("finished_goods_max_jobs_per_product_per_day", 2)
+            for product_id in self.product_ids:
+                if product_id not in self.inventory or product_id in self.parts_by_id:
+                    continue
+                inv_data = self.inventory.get(product_id, {})
+                if not isinstance(inv_data, dict):
+                    continue
+                on_hand = inv_data.get("qty_on_hand", 0)
+                reorder_point = inv_data.get("reorder_point", 15)
+                safety_stock = inv_data.get("safety_stock", 5)
+                backorder_qty = backorder_qty_by_product.get(product_id, 0)
+                incoming = incoming_production.get(product_id, 0)
+                net_position = on_hand + incoming - backorder_qty
+
+                if net_position >= reorder_point:
+                    continue
+                jobs_today = self._jobs_created_today_by_product.get(product_id, 0)
+                if jobs_today >= max_jobs_per_day:
+                    continue
+
+                # Target: cover backorders + reorder_point + safety_stock
+                shortfall = (reorder_point + safety_stock + backorder_qty) - net_position
+                if shortfall <= 0:
+                    continue
+                batch_max = self.config.get("production_batch_size_max", 15)
+                job_qty = min(max(1, shortfall), max(1, batch_max))
+                self._jobs_created_today_by_product[product_id] = jobs_today + 1
+                self.create_production_job(product_id=product_id, qty=job_qty)
+
+        # --- Parts: reorder when net position <= reorder point ---
+        part_demand_wip = self._part_demand_from_wip_jobs()
+        incoming_parts: dict[str, float] = {}
+        for po in self._pending_purchase_orders:
+            incoming_parts[po.part_id] = incoming_parts.get(po.part_id, 0) + po.qty
+
         for part_id, inv_data in self.inventory.items():
             if not isinstance(inv_data, dict):
                 continue
-            
-            # Skip finished goods (only reorder parts)
             if part_id not in self.parts_by_id:
                 continue
-                
-            # Skip if already on order
             if part_id in self._parts_on_order:
                 continue
-            
+
             qty_on_hand = inv_data.get("qty_on_hand", 0)
             reorder_point = inv_data.get("reorder_point", 0)
             safety_stock = inv_data.get("safety_stock", 0)
-            
-            if qty_on_hand <= reorder_point:
-                # Order enough to get back above reorder point + safety buffer
-                order_qty = (reorder_point - qty_on_hand) + safety_stock + 50
-                
+            incoming = incoming_parts.get(part_id, 0)
+            demand_wip = part_demand_wip.get(part_id, 0)
+            net_position = qty_on_hand + incoming - demand_wip
+
+            if net_position <= reorder_point:
+                target_max = reorder_point + safety_stock + 50
+                order_qty = max(0, target_max - net_position)
+                if order_qty <= 0:
+                    continue
                 self._log_event(
                     "ReorderTriggered",
                     {
                         "part_id": part_id,
                         "qty_on_hand": qty_on_hand,
                         "reorder_point": reorder_point,
+                        "net_position": net_position,
                         "order_qty": order_qty,
                     },
                 )
-                
                 self.order_parts_from_supplier(part_id=part_id, qty=order_qty, is_reorder=True)
 
     def _process_pending_purchase_orders(self) -> None:
@@ -1622,16 +1832,13 @@ class WorldEngine:
         - Quality rejections (incoming inspection based on supplier quality)
         """
         still_pending = []
-        
+        receive_at = lambda po: po.actual_arrival if po.actual_arrival is not None else po.eta
         for po in self._pending_purchase_orders:
-            if self.current_time >= po.eta:
-                # PO has arrived - process it
+            if self.current_time >= receive_at(po):
                 self._receive_purchase_order(po)
-                # Remove from on-order tracking
                 self._parts_on_order.discard(po.part_id)
             else:
                 still_pending.append(po)
-        
         self._pending_purchase_orders = still_pending
 
     def _receive_purchase_order(self, po: PendingPurchaseOrder) -> None:
@@ -1703,7 +1910,8 @@ class WorldEngine:
             self.inventory[po.part_id].get("qty_on_hand", 0) + int(received_qty)
         )
         
-        # Log receipt event
+        # Log receipt event (with projected vs actual for lead time analytics)
+        actual_receipt_time = po.actual_arrival if po.actual_arrival is not None else self.current_time
         self._log_event(
             "PurchaseOrderReceived",
             {
@@ -1715,6 +1923,8 @@ class WorldEngine:
                 "supplier_id": po.supplier_id,
                 "was_partial_shipment": is_partial,
                 "new_qty_on_hand": self.inventory[po.part_id]["qty_on_hand"],
+                "projected_eta": iso_utc(po.eta),
+                "actual_receipt_time": iso_utc(actual_receipt_time),
             },
         )
 
@@ -1736,10 +1946,11 @@ class WorldEngine:
             product_id = job.get("product_id") or (self.product_ids[0] if self.product_ids else "D-101")
             
             if status == "Planned":
-                # Try to start production
-                missing = self._missing_parts_for_job(product_id)
+                # Try to start production (batch_size from job)
+                batch_size = job.get("qty_per_job", 1)
+                missing = self._missing_parts_for_job(product_id, batch_size)
                 if not missing:
-                    self._consume_parts_for_job(product_id)
+                    self._consume_parts_for_job(product_id, batch_size)
                     job["status"] = "WIP"
                     job["start_date"] = iso_utc(self.current_time)
                     
@@ -1787,13 +1998,13 @@ class WorldEngine:
     def _complete_production_job(self, job: dict) -> None:
         """Complete a production job and add finished goods to inventory."""
         product_id = job.get("product_id") or (self.product_ids[0] if self.product_ids else "D-101")
+        qty_per_job = job.get("qty_per_job", 1)
         
-        # Add 1 unit of finished product to inventory
         if product_id not in self.inventory:
             self.inventory[product_id] = {"qty_on_hand": 0, "reorder_point": 15, "safety_stock": 5}
         
         self.inventory[product_id]["qty_on_hand"] = (
-            self.inventory[product_id].get("qty_on_hand", 0) + 1
+            self.inventory[product_id].get("qty_on_hand", 0) + qty_per_job
         )
         
         job["status"] = "Completed"
@@ -1805,40 +2016,41 @@ class WorldEngine:
                 "job_id": job["job_id"],
                 "product_id": product_id,
                 "status": job["status"],
+                "qty_produced": qty_per_job,
                 "new_qty_on_hand": self.inventory[product_id]["qty_on_hand"],
             },
         )
         # Allocation: track this job as source for future shipments (FIFO)
-        self._finished_good_sources.setdefault(product_id, []).append((job["job_id"], 1))
+        self._finished_good_sources.setdefault(product_id, []).append((job["job_id"], qty_per_job))
 
-    def _missing_parts_for_job(self, product_id: str) -> dict[str, float]:
+    def _missing_parts_for_job(self, product_id: str, batch_size: int = 1) -> dict[str, float]:
         """
         Check which parts are missing for a production job.
-        
-        Fixed: Now takes product_id parameter to filter BOM correctly.
+        batch_size multiplies BOM qty (for multi-unit jobs).
         """
         missing: dict[str, float] = {}
         for comp in self._bom_components_for_product(product_id):
             part_id = comp.get("component_id")
-            qty = comp.get("qty", 0)
+            qty_per_unit = comp.get("qty", 0)
             if not part_id:
                 continue
+            qty_needed = qty_per_unit * batch_size
             on_hand = self.inventory.get(part_id, {}).get("qty_on_hand", 0)
-            if on_hand < qty:
-                missing[part_id] = qty - on_hand
+            if on_hand < qty_needed:
+                missing[part_id] = qty_needed - on_hand
         return missing
 
-    def _consume_parts_for_job(self, product_id: str) -> None:
+    def _consume_parts_for_job(self, product_id: str, batch_size: int = 1) -> None:
         """
         Consume parts from inventory for a production job.
-        
-        Fixed: Now takes product_id parameter to filter BOM correctly.
+        batch_size multiplies BOM qty (for multi-unit jobs).
         """
         for comp in self._bom_components_for_product(product_id):
             part_id = comp.get("component_id")
-            qty = comp.get("qty", 0)
+            qty_per_unit = comp.get("qty", 0)
             if not part_id:
                 continue
+            qty = qty_per_unit * batch_size
             entry = self.inventory.get(part_id)
             if not entry:
                 continue
@@ -1888,13 +2100,20 @@ class WorldEngine:
         
         lead_time_hours = self.rng.randint(adjusted_min, max(adjusted_min + 1, adjusted_max))
         eta = self.current_time + timedelta(hours=lead_time_hours)
-        
+        # Stochastic variance on actual arrival (e.g. +/- 48 hours)
+        variance_hours = self.config.get("supplier_lead_time_variance_hours", 0)
+        if variance_hours > 0:
+            v = self.rng.randint(-variance_hours, variance_hours)
+            actual_arrival = eta + timedelta(hours=v)
+        else:
+            actual_arrival = eta
+
         # Calculate cost with drift and supplier pricing
         unit_cost, base_cost, cost_variance_pct = self._get_current_part_cost(part_id, supplier_id)
         total_cost = round(unit_cost * qty, 2)
-        
+
         po_id = str(uuid.uuid4())
-        
+
         # Track the pending PO for later receipt
         pending_po = PendingPurchaseOrder(
             purchase_order_id=po_id,
@@ -1904,6 +2123,7 @@ class WorldEngine:
             eta=eta,
             created_at=self.current_time,
             unit_cost=unit_cost,
+            actual_arrival=actual_arrival,
         )
         self._pending_purchase_orders.append(pending_po)
         self._parts_on_order.add(part_id)
